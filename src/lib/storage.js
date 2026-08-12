@@ -1,5 +1,6 @@
 const KEY = 'seraphina_state_v1';
 const WIFE_KEY = 'seraphina_wife_v1';
+const THEME_KEY = 'seraphina_theme_v1';
 
 export function loadState() {
   try {
@@ -64,19 +65,7 @@ export function getRateInfo() {
     blocked: timestamps.length >= RATE_MAX,
     oldest: timestamps[0] || null,
     resetIn: timestamps[0] ? Math.max(0, RATE_WINDOW_MS - (now - timestamps[0])) : 0,
-  max: RATE_MAX,
-  windowMinutes: 30,
-  timestamps,
-  windowMs: RATE_WINDOW_MS,
-  oldestTimestamp: timestamps[0] || null,
-  resetAt: timestamps[0] ? timestamps[0] + RATE_WINDOW_MS : 0,
-  blocked_: timestamps.length >= RATE_MAX,
-  resetInMs: timestamps[0] ? Math.max(0, RATE_WINDOW_MS - (now - timestamps[0])) : 0,
-  remainingMessages: Math.max(0, RATE_MAX - timestamps.length),
-    messageCount: timestamps.length,
-    limit: RATE_MAX,
-    windowMin: 30,
-    oldestTs: timestamps[0] || null,
+    max: RATE_MAX,
   };
 }
 
@@ -96,4 +85,12 @@ export function isWifeEnabled() {
 
 export function setWifeEnabled(on) {
   localStorage.setItem(WIFE_KEY, on ? '1' : '0');
+}
+
+export function getTheme() {
+  return localStorage.getItem(THEME_KEY) || 'light';
+}
+
+export function setTheme(theme) {
+  localStorage.setItem(THEME_KEY, theme);
 }
