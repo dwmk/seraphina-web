@@ -1,5 +1,5 @@
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
 
 function getPrompts(version) {
   if (version === 'v1.4') {
@@ -31,13 +31,20 @@ export default async function handler(req, res) {
     const ver = version === 'v1.4' ? 'v1.4' : 'v1.6';
     const { system, special } = getPrompts(ver);
 
+    // 1. Cap the memory to the last 10-15 messages to prevent prompt dilution
+    const recentHistory = history.slice(-12);
+
+    // 2. Re-introduce the contextual anchor block to reinforce the prompt
+    const basePrompt = wifeMode ? special : system;
+    const contextualPrompt = `${basePrompt}\n\n--- CURRENT CONTEXT ---\nMaintain your established persona, instructions, and formatting strictly in your next response.`;
+
     const payload = {
       model: GROQ_MODEL,
-      temperature: 0.7,
+      temperature: 0.7, // You may want to lower this to 0.5 or 0.6 if she is still drifting
       max_tokens: 1024,
       messages: [
-        { role: 'system', content: wifeMode ? special : system },
-        ...history,
+        { role: 'system', content: contextualPrompt },
+        ...recentHistory,
       ],
     };
 

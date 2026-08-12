@@ -1,5 +1,5 @@
 {
-  "name": "muxday",
+  "name": "seraphina-web",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -16,7 +16,9 @@
     "gsap": "^3.12.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-markdown": "^9.0.1",
     "react-use": "^17.5.0",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^2.2.1"
   },
   "devDependencies": {

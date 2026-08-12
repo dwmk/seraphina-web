@@ -330,8 +330,8 @@ export default function App() {
                   className={`flex gap-2 sm:gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {msg.role === 'assistant' && (
-                    <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl ${logoBox} border flex items-center justify-center shrink-0 mt-1 overflow-hidden`}>
-                      <Logo size={36} variant={2} overflow />
+                    <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl ${logoBox} border flex items-center justify-center shrink-0 mt-1 overflow-hidden`}>
+                      <Logo size={56} variant={2} overflow />
                     </div>
                   )}
                   <div
@@ -341,7 +341,38 @@ export default function App() {
                         : `${aiBubble} ${aiBubbleText} rounded-tl-sm backdrop-blur-sm hover:shadow-lg hover:-translate-y-0.5 ${isDark ? 'hover:bg-white/10' : 'hover:bg-zinc-50'} ${isDark ? 'hover:border-white/20' : 'hover:border-zinc-300'}`
                     }`}
                   >
-                    <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      className="break-words space-y-3"
+                      components={{
+                        // Keeps standard line breaks intact for normal text
+                        p: ({ node, ...props }) => <p className="whitespace-pre-wrap leading-relaxed" {...props} />,
+                        
+                        // Renders Discord-style inline code and multiline code blocks
+                        code: ({ node, inline, className, children, ...props }) => {
+                          return !inline ? (
+                            <div className="bg-zinc-950 text-zinc-300 p-3.5 rounded-xl overflow-x-auto my-3 text-[13px] sm:text-sm border border-zinc-800 shadow-inner">
+                              <code className={className} style={{ fontFamily: 'monospace' }} {...props}>{children}</code>
+                            </div>
+                          ) : (
+                            <code className="bg-black/10 dark:bg-white/10 rounded-md px-1.5 py-0.5 text-[0.9em] font-mono" {...props}>{children}</code>
+                          );
+                        },
+                        
+                        // Restores standard Markdown styling stripped by Tailwind's reset
+                        ul: ({ node, ...props }) => <ul className="list-disc list-outside ml-5 space-y-1" {...props} />,
+                        ol: ({ node, ...props }) => <ol className="list-decimal list-outside ml-5 space-y-1" {...props} />,
+                        li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                        strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
+                        h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mt-5 mb-3" {...props} />,
+                        h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-5 mb-3" {...props} />,
+                        h3: ({ node, ...props }) => <h3 className="text-lg font-bold mt-4 mb-2" {...props} />,
+                        a: ({ node, ...props }) => <a className="underline underline-offset-2 hover:opacity-80 transition-opacity" target="_blank" rel="noreferrer" {...props} />,
+                        blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-current opacity-70 pl-4 my-2 italic" {...props} />
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
                   </div>
                 </motion.div>
               ))}
@@ -353,8 +384,8 @@ export default function App() {
                 animate={{ opacity: 1 }}
                 className="flex gap-2 sm:gap-3 justify-start"
               >
-                <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl ${logoBox} border flex items-center justify-center shrink-0 mt-1 overflow-hidden`}>
-                  <Logo size={36} variant={2} overflow />
+                <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl ${logoBox} border flex items-center justify-center shrink-0 mt-1 overflow-hidden`}>
+                  <Logo size={56} variant={2} overflow />
                 </div>
                 <div className={`px-4 sm:px-5 py-4 rounded-2xl ${aiBubble} border`}>
                   <div className="flex gap-1.5">
