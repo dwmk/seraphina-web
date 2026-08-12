@@ -6,6 +6,8 @@ import { Sidebar } from './components/Sidebar';
 import { ChatInput } from './components/ChatInput';
 import { BlockScreen } from './components/BlockScreen';
 import { DeleteModal } from './components/DeleteModal';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { fetchAIReply, verifyWifePassword, generateTitle } from './lib/api';
 import {
   loadConversations, createConversation, deleteConversation, updateConversation,
