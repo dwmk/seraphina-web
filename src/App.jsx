@@ -331,7 +331,7 @@ export default function App() {
                 >
                   {msg.role === 'assistant' && (
                     <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl ${logoBox} border flex items-center justify-center shrink-0 mt-1 overflow-hidden`}>
-                      <Logo size={18} variant={2} overflow />
+                      <Logo size={36} variant={2} overflow />
                     </div>
                   )}
                   <div
@@ -354,7 +354,7 @@ export default function App() {
                 className="flex gap-2 sm:gap-3 justify-start"
               >
                 <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl ${logoBox} border flex items-center justify-center shrink-0 mt-1 overflow-hidden`}>
-                  <Logo size={18} variant={2} overflow />
+                  <Logo size={36} variant={2} overflow />
                 </div>
                 <div className={`px-4 sm:px-5 py-4 rounded-2xl ${aiBubble} border`}>
                   <div className="flex gap-1.5">
