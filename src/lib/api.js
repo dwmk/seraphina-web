@@ -22,11 +22,11 @@ export async function verifyWifePassword(password) {
   return data.valid === true;
 }
 
-export async function generateTitle(messages) {
+export async function generateTitle(messages, version = 'v1.6') {
   const res = await fetch('/api/generate-title', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages }),
+    body: JSON.stringify({ messages, version }),
   });
   if (!res.ok) return null;
   const data = await res.json().catch(() => ({}));

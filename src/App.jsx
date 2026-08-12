@@ -106,7 +106,7 @@ export default function App() {
   const maybeGenerateTitle = async (convId, msgs) => {
     if (msgCountRef.current === 0 || msgCountRef.current % 5 !== 0) return;
     try {
-      const title = await generateTitle(msgs);
+      const title = await generateTitle(msgs, version);
       if (title) {
         updateConversation(convId, (c) => ({ ...c, title }));
         setConversations(loadConversations());
@@ -331,14 +331,14 @@ export default function App() {
                 >
                   {msg.role === 'assistant' && (
                     <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl ${logoBox} border flex items-center justify-center shrink-0 mt-1 overflow-hidden`}>
-                      <Logo size={18} variant={2} />
+                      <Logo size={18} variant={2} overflow />
                     </div>
                   )}
                   <div
-                    className={`max-w-[85%] sm:max-w-[80%] px-4 sm:px-5 py-3 rounded-2xl text-sm sm:text-base leading-relaxed ${
+                    className={`group/msg max-w-[85%] sm:max-w-[80%] px-4 sm:px-5 py-3 rounded-2xl text-sm sm:text-base leading-relaxed transition-all duration-200 cursor-default ${
                       msg.role === 'user'
-                        ? `${userBubble} rounded-tr-sm`
-                        : `${aiBubble} ${aiBubbleText} rounded-tl-sm backdrop-blur-sm`
+                        ? `${userBubble} rounded-tr-sm hover:shadow-lg hover:-translate-y-0.5`
+                        : `${aiBubble} ${aiBubbleText} rounded-tl-sm backdrop-blur-sm hover:shadow-lg hover:-translate-y-0.5 ${isDark ? 'hover:bg-white/10' : 'hover:bg-zinc-50'} ${isDark ? 'hover:border-white/20' : 'hover:border-zinc-300'}`
                     }`}
                   >
                     <p className="whitespace-pre-wrap break-words">{msg.content}</p>
@@ -354,7 +354,7 @@ export default function App() {
                 className="flex gap-2 sm:gap-3 justify-start"
               >
                 <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl ${logoBox} border flex items-center justify-center shrink-0 mt-1 overflow-hidden`}>
-                  <Logo size={18} variant={2} />
+                  <Logo size={18} variant={2} overflow />
                 </div>
                 <div className={`px-4 sm:px-5 py-4 rounded-2xl ${aiBubble} border`}>
                   <div className="flex gap-1.5">

@@ -1,6 +1,13 @@
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
+function getPromptForVersion(version) {
+  if (version === 'v1.4') {
+    return process.env.PROMPT_V14 || process.env.PROMPT || 'You are Seraphina, a helpful AI assistant.';
+  }
+  return process.env.PROMPT || 'You are Seraphina, a helpful AI assistant.';
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -13,15 +20,24 @@ export default async function handler(req, res) {
   if (!GROQ_API_KEY) return res.status(500).json({ error: 'GROQ API key not configured' });
 
   try {
-    const { messages } = req.body || {};
+    const { messages, version } = req.body || {};
     const history = Array.isArray(messages) ? messages : [];
+    const ver = version === 'v1.4' ? 'v1.4' : 'v1.6';
+    const prompt = getPromptForVersion(ver);
+
+    const systemContent = (
+      `${prompt}\n\n` +
+      `Based on the system prompt above and the conversation messages below, ` +
+      `generate a short title that summarizes the topic of this conversation in 5 words or fewer. ` +
+      `Return only the title text, no quotes, no punctuation at the end.`
+    );
 
     const payload = {
       model: GROQ_MODEL,
       temperature: 0.3,
       max_tokens: 30,
       messages: [
-        { role: 'system', content: 'Generate a short, concise title (max 5 words) for this conversation. Return only the title, no quotes, no punctuation at the end.' },
+        { role: 'system', content: systemContent },
         ...history.slice(-6),
       ],
     };
