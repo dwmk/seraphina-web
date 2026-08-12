@@ -2,51 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom styles from your previous globals.css */
 :root {
-  --background: #050202;
-  --foreground: #ededed;
+  --background: #ffffff;
+  --foreground: #18181b;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  overflow-x: hidden; /* Kept from previous globals.css */
-
-  /* Styles consolidated from your original index.css */
+  font-family: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
   margin: 0;
-  cursor: none; /* Hide default cursor for custom implementation */
 }
 
-.hero-logo {
-    filter: hue-rotate(119deg) drop-shadow(0 20px 60px rgba(255, 10, 69, 0.3));
-}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
 
-/* Mobile override for cursor (from index.css) */
-@media (max-width: 768px) {
-  body {
-    cursor: auto;
-  }
-}
-
-/* Custom Scrollbar (from index.css) */
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-track {
-  background: #0f0505;
-}
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #ff2a2a, #ff7b00);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #ffcc00;
-}
-
-/* Selection Color (from index.css) */
-::selection {
-  background: #ff7b00;
-  color: black;
-}
+::selection { background: #fbcfe8; color: #000; }
