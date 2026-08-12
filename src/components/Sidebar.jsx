@@ -1,8 +1,12 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash, Chat, X } from '@phosphor-icons/react';
+import { Plus, Trash, Chat, X, Pencil, Check } from '@phosphor-icons/react';
 import { Logo } from './Logo';
 
-export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, open, onClose, theme }) {
+export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, onRename, open, onClose, theme }) {
+  const [editingId, setEditingId] = useState(null);
+  const [editingTitle, setEditingTitle] = useState('');
+
   const panelBg = theme === 'dark' ? 'bg-zinc-950/80 border-white/10' : 'bg-white/90 border-zinc-200';
   const textPrimary = theme === 'dark' ? 'text-white' : 'text-zinc-900';
   const textSecondary = theme === 'dark' ? 'text-zinc-400' : 'text-zinc-600';
@@ -11,7 +15,21 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, op
   const activeBg = theme === 'dark' ? 'bg-white/10' : 'bg-zinc-200/70';
   const borderCol = theme === 'dark' ? 'border-white/10' : 'border-zinc-200';
   const newChatBg = theme === 'dark' ? 'bg-white text-zinc-900 hover:bg-zinc-200' : 'bg-zinc-900 text-white hover:bg-black';
-  const overlayBg = theme === 'dark' ? 'bg-black/50' : 'bg-black/30';
+  const inputBg = theme === 'dark' ? 'bg-zinc-800 text-white border-white/20' : 'bg-white text-zinc-900 border-zinc-300';
+
+  const startRename = (e, c) => {
+    e.stopPropagation();
+    setEditingId(c.id);
+    setEditingTitle(c.title);
+  };
+
+  const saveRename = (e, id) => {
+    e.stopPropagation();
+    if (editingTitle.trim()) {
+      onRename(id, editingTitle.trim());
+    }
+    setEditingId(null);
+  };
 
   return (
     <>
@@ -60,19 +78,51 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, op
           {conversations.map((c) => (
             <div
               key={c.id}
-              onClick={() => onSelect(c.id)}
-              className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${
+              onClick={() => editingId !== c.id && onSelect(c.id)}
+              className={`group flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${
                 c.id === activeId ? `${activeBg} ${textPrimary}` : `${hoverBg} ${textSecondary}`
               }`}
             >
               <Chat size={18} className={`shrink-0 ${textMuted}`} />
-              <span className="flex-1 text-sm font-medium truncate">{c.title}</span>
-              <button
-                onClick={(e) => { e.stopPropagation(); onDelete(c.id); }}
-                className={`opacity-0 group-hover:opacity-100 ${textMuted} hover:text-red-400 transition-opacity`}
-              >
-                <Trash size={16} />
-              </button>
+              
+              {editingId === c.id ? (
+                <div className="flex items-center gap-1 flex-1">
+                  <input
+                    type="text"
+                    value={editingTitle}
+                    onChange={(e) => setEditingTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveRename(e, c.id);
+                      if (e.key === 'Escape') setEditingId(null);
+                    }}
+                    autoFocus
+                    className={`w-full px-2 py-0.5 text-xs rounded border outline-none ${inputBg}`}
+                  />
+                  <button onClick={(e) => saveRename(e, c.id)} className="p-1 hover:text-green-400">
+                    <Check size={14} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <span className="flex-1 text-sm font-medium truncate">{c.title}</span>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => startRename(e, c)}
+                      className={`${textMuted} hover:text-blue-400 p-0.5`}
+                      title="Rename conversation"
+                    >
+                      <Pencil size={15} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDelete(c.id); }}
+                      className={`${textMuted} hover:text-red-400 p-0.5`}
+                      title="Delete conversation"
+                    >
+                      <Trash size={15} />
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>

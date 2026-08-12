@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { List, Lock, CaretDown, Sun, Moon } from '@phosphor-icons/react';
 import { Logo } from './components/Logo';
@@ -15,6 +15,7 @@ import {
 } from './lib/storage';
 
 const VERSIONS = ['v1.6', 'v1.4'];
+const GENERIC_ERROR = "Action could not be completed. Seraphina couldn't receive your message or she couldn't react to it.";
 
 export default function App() {
   const [conversations, setConversations] = useState([]);
@@ -32,7 +33,6 @@ export default function App() {
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const scrollRef = useRef(null);
-  const msgCountRef = useRef(0);
 
   useEffect(() => {
     const convs = loadConversations();
@@ -46,7 +46,6 @@ export default function App() {
     if (!activeId) { setMessages([]); return; }
     const conv = conversations.find((c) => c.id === activeId);
     setMessages(conv ? conv.messages : []);
-    msgCountRef.current = conv ? conv.messages.length : 0;
   }, [activeId, conversations]);
 
   useEffect(() => {
@@ -73,7 +72,6 @@ export default function App() {
     setConversations(loadConversations());
     setActiveId(conv.id);
     setMessages([]);
-    msgCountRef.current = 0;
     setSidebarOpen(false);
     setError('');
   };
@@ -82,6 +80,11 @@ export default function App() {
     setActiveId(id);
     setSidebarOpen(false);
     setError('');
+  };
+
+  const handleRename = (id, newTitle) => {
+    updateConversation(id, (c) => ({ ...c, title: newTitle }));
+    setConversations(loadConversations());
   };
 
   const handleDeleteRequest = (id) => {
@@ -106,14 +109,16 @@ export default function App() {
   };
 
   const maybeGenerateTitle = async (convId, msgs) => {
-    if (msgCountRef.current === 0 || msgCountRef.current % 5 !== 0) return;
+    if (!msgs || msgs.length === 0 || msgs.length % 5 !== 0) return;
     try {
       const title = await generateTitle(msgs, version);
       if (title) {
         updateConversation(convId, (c) => ({ ...c, title }));
         setConversations(loadConversations());
       }
-    } catch {}
+    } catch {
+      // Suppress console error output
+    }
   };
 
   const handleSend = async (text) => {
@@ -129,7 +134,6 @@ export default function App() {
     const newMsgs = [...messages, userMsg];
     setMessages(newMsgs);
     persistMessages(convId, newMsgs);
-    msgCountRef.current += 1;
 
     setLoading(true);
     setError('');
@@ -139,14 +143,13 @@ export default function App() {
       const finalMsgs = [...newMsgs, aiMsg];
       setMessages(finalMsgs);
       persistMessages(convId, finalMsgs);
-      msgCountRef.current += 1;
 
       const info = recordMessage();
       setRateInfo(info);
 
       maybeGenerateTitle(convId, finalMsgs);
-    } catch (err) {
-      setError(err.message || 'Something went wrong');
+    } catch {
+      setError(GENERIC_ERROR);
     } finally {
       setLoading(false);
     }
@@ -199,14 +202,12 @@ export default function App() {
 
   return (
     <div className={`h-screen w-screen overflow-hidden ${bgBase} ${textBase} relative`}>
-      {/* Animated aurora background */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-1/4 -left-1/4 w-[500px] h-[500px] sm:w-[600px] sm:h-[600px] bg-pink-500/10 rounded-full blur-[120px] animate-aurora-1" />
         <div className="absolute top-1/3 -right-1/4 w-[400px] h-[400px] sm:w-[500px] sm:h-[500px] bg-blue-500/10 rounded-full blur-[120px] animate-aurora-2" />
         <div className="absolute -bottom-1/4 left-1/3 w-[450px] h-[450px] sm:w-[550px] sm:h-[550px] bg-emerald-500/8 rounded-full blur-[120px] animate-aurora-3" />
       </div>
 
-      {/* Grid overlay */}
       <div
         className="fixed inset-0 z-0 pointer-events-none opacity-[0.03]"
         style={{
@@ -221,14 +222,13 @@ export default function App() {
         onSelect={handleSelect}
         onNew={handleNew}
         onDelete={handleDeleteRequest}
+        onRename={handleRename}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         theme={theme}
       />
 
-      {/* Main chat area - always centered, full width */}
       <div className="absolute inset-0 flex flex-col z-10">
-        {/* Header */}
         <header className={`flex items-center gap-2 sm:gap-3 p-3 sm:p-4 border-b ${headerBg} backdrop-blur-xl`}>
           <button
             onClick={() => setSidebarOpen((v) => !v)}
@@ -242,7 +242,6 @@ export default function App() {
             <span className="font-bold text-base sm:text-lg">Seraphina</span>
           </div>
 
-          {/* Version dropdown */}
           <div className="relative">
             <button
               onClick={() => setVersionDropdown((v) => !v)}
@@ -284,7 +283,6 @@ export default function App() {
             </span>
           )}
 
-          {/* Right side: message counter + theme toggle */}
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <div className="flex items-center gap-1.5 text-sm">
               <span className={`font-mono ${counterText}`}>
@@ -301,7 +299,6 @@ export default function App() {
           </div>
         </header>
 
-        {/* Chat messages - centered */}
         <main className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 sm:py-6">
           <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
             {messages.length === 0 && !loading && (
@@ -345,32 +342,33 @@ export default function App() {
                   >
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
-                      className="break-words space-y-3"
+                      className="break-words space-y-2 text-sm sm:text-base"
                       components={{
-                        // Keeps standard line breaks intact for normal text
-                        p: ({ node, ...props }) => <p className="whitespace-pre-wrap leading-relaxed" {...props} />,
+                        // Discord-style paragraph line height
+                        p: ({ node, ...props }) => <p className="whitespace-pre-wrap leading-relaxed inline-block w-full" {...props} />,
                         
-                        // Renders Discord-style inline code and multiline code blocks
+                        // Discord code blocks and inline code
                         code: ({ node, inline, className, children, ...props }) => {
                           return !inline ? (
-                            <div className="bg-zinc-950 text-zinc-300 p-3.5 rounded-xl overflow-x-auto my-3 text-[13px] sm:text-sm border border-zinc-800 shadow-inner">
-                              <code className={className} style={{ fontFamily: 'monospace' }} {...props}>{children}</code>
+                            <div className="bg-[#2b2d31] text-[#dbdee1] p-3 rounded-md overflow-x-auto my-2 text-xs sm:text-sm font-mono border border-zinc-700/50 shadow-sm">
+                              <code className={className} {...props}>{children}</code>
                             </div>
                           ) : (
-                            <code className="bg-black/10 dark:bg-white/10 rounded-md px-1.5 py-0.5 text-[0.9em] font-mono" {...props}>{children}</code>
+                            <code className="bg-[#2b2d31] text-[#dbdee1] rounded px-1.5 py-0.5 text-[0.875em] font-mono border border-zinc-700/30" {...props}>{children}</code>
                           );
                         },
                         
-                        // Restores standard Markdown styling stripped by Tailwind's reset
+                        // Discord blockquotes
+                        blockquote: ({ node, ...props }) => (
+                          <blockquote className="border-l-4 border-zinc-500/80 pl-3 my-1 italic text-zinc-400" {...props} />
+                        ),
+
+                        // Discord lists
                         ul: ({ node, ...props }) => <ul className="list-disc list-outside ml-5 space-y-1" {...props} />,
                         ol: ({ node, ...props }) => <ol className="list-decimal list-outside ml-5 space-y-1" {...props} />,
-                        li: ({ node, ...props }) => <li className="pl-1" {...props} />,
-                        strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
-                        h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mt-5 mb-3" {...props} />,
-                        h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-5 mb-3" {...props} />,
-                        h3: ({ node, ...props }) => <h3 className="text-lg font-bold mt-4 mb-2" {...props} />,
-                        a: ({ node, ...props }) => <a className="underline underline-offset-2 hover:opacity-80 transition-opacity" target="_blank" rel="noreferrer" {...props} />,
-                        blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-current opacity-70 pl-4 my-2 italic" {...props} />
+                        li: ({ node, ...props }) => <li className="pl-0.5" {...props} />,
+                        strong: ({ node, ...props }) => <strong className="font-bold" {...props} />,
+                        a: ({ node, ...props }) => <a className="text-blue-400 hover:underline" target="_blank" rel="noreferrer" {...props} />
                       }}
                     >
                       {msg.content}
@@ -419,7 +417,6 @@ export default function App() {
 
       {rateInfo.blocked && <BlockScreen resetIn={rateInfo.resetIn} theme={theme} />}
 
-      {/* Wife Mode password modal */}
       <AnimatePresence>
         {wifeModal && (
           <motion.div
@@ -473,7 +470,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Delete confirmation modal */}
       {deleteTarget && (
         <DeleteModal
           conversation={deleteTarget}
