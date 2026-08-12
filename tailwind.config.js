@@ -5,7 +5,7 @@ module.exports = {
     extend: {
       colors: {
         seraphina: {
-          dark: '#18181b',
+          dark: '#09090b',
           accent: '#ec4899',
         }
       },

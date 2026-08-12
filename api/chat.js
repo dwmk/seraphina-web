@@ -1,46 +1,49 @@
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
-
-const SYSTEM_PROMPT = process.env.PROMPT || 'You are Seraphina, a helpful AI assistant.';
-const SPECIAL_PROMPT = process.env.SPECIALPROMPT || SYSTEM_PROMPT;
-const GROQ_API_KEY = process.env.GROQ || '';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
+function getPrompts(version) {
+  if (version === 'v1.4') {
+    return {
+      system: process.env.PROMPT_V14 || process.env.PROMPT || 'You are Seraphina, a helpful AI assistant.',
+      special: process.env.SPECIALPROMPT_V14 || process.env.SPECIALPROMPT || process.env.PROMPT_V14 || process.env.PROMPT || 'You are Seraphina, a helpful AI assistant.',
+    };
+  }
+  return {
+    system: process.env.PROMPT || 'You are Seraphina, a helpful AI assistant.',
+    special: process.env.SPECIALPROMPT || process.env.PROMPT || 'You are Seraphina, a helpful AI assistant.',
+  };
+}
+
 export default async function handler(req, res) {
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    return res.status(200).end();
-  }
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const GROQ_API_KEY = process.env.GROQ || '';
+  if (!GROQ_API_KEY) return res.status(500).json({ error: 'GROQ API key not configured' });
 
   try {
-    const { messages, wifeMode } = req.body || {};
+    const { messages, wifeMode, version } = req.body || {};
     const history = Array.isArray(messages) ? messages : [];
+    const ver = version === 'v1.4' ? 'v1.4' : 'v1.6';
+    const { system, special } = getPrompts(ver);
 
     const payload = {
       model: GROQ_MODEL,
       temperature: 0.7,
       max_tokens: 1024,
       messages: [
-        { role: 'system', content: wifeMode ? SPECIAL_PROMPT : SYSTEM_PROMPT },
+        { role: 'system', content: wifeMode ? special : system },
         ...history,
       ],
     };
 
     const upstream = await fetch(GROQ_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${GROQ_API_KEY}`,
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_API_KEY}` },
       body: JSON.stringify(payload),
     });
 

@@ -1,4 +1,5 @@
 const KEY = 'seraphina_state_v1';
+const WIFE_KEY = 'seraphina_wife_v1';
 
 export function loadState() {
   try {
@@ -13,8 +14,7 @@ export function saveState(state) {
 }
 
 export function loadConversations() {
-  const state = loadState();
-  return state.conversations || [];
+  return loadState().conversations || [];
 }
 
 export function saveConversations(conversations) {
@@ -51,10 +51,6 @@ export function updateConversation(id, updater) {
   return convs;
 }
 
-export function getConversation(id) {
-  return loadConversations().find((c) => c.id === id) || null;
-}
-
 const RATE_MAX = 30;
 const RATE_WINDOW_MS = 30 * 60 * 1000;
 
@@ -68,6 +64,19 @@ export function getRateInfo() {
     blocked: timestamps.length >= RATE_MAX,
     oldest: timestamps[0] || null,
     resetIn: timestamps[0] ? Math.max(0, RATE_WINDOW_MS - (now - timestamps[0])) : 0,
+  max: RATE_MAX,
+  windowMinutes: 30,
+  timestamps,
+  windowMs: RATE_WINDOW_MS,
+  oldestTimestamp: timestamps[0] || null,
+  resetAt: timestamps[0] ? timestamps[0] + RATE_WINDOW_MS : 0,
+  blocked_: timestamps.length >= RATE_MAX,
+  resetInMs: timestamps[0] ? Math.max(0, RATE_WINDOW_MS - (now - timestamps[0])) : 0,
+  remainingMessages: Math.max(0, RATE_MAX - timestamps.length),
+    messageCount: timestamps.length,
+    limit: RATE_MAX,
+    windowMin: 30,
+    oldestTs: timestamps[0] || null,
   };
 }
 
@@ -78,18 +87,7 @@ export function recordMessage() {
   timestamps.push(now);
   state.rateTimestamps = timestamps;
   saveState(state);
-  return {
-    count: timestamps.length,
-    remaining: Math.max(0, RATE_MAX - timestamps.length),
-    blocked: timestamps.length >= RATE_MAX,
-    resetIn: RATE_WINDOW_MS,
-  };
-}
-
-const WIFE_KEY = 'seraphina_wife_v1';
-
-export function getWifePassword() {
-  return process.env.WIFE_PASSWORD || 'seraphina';
+  return getRateInfo();
 }
 
 export function isWifeEnabled() {
