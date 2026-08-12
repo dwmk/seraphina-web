@@ -78,7 +78,7 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, op
         </div>
 
         <div className={`p-3 border-t ${borderCol} text-xs ${textMuted} text-center`}>
-          Seraphina v3.0
+          © Seraphina Management Team
         </div>
       </aside>
     </>
