@@ -3,9 +3,9 @@ const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
 
 function getPromptForVersion(version) {
   if (version === 'v1.4') {
-    return process.env.PROMPT_V14 || process.env.PROMPT || 'You are Seraphina, a helpful AI assistant.';
+    return process.env.PROMPT_V14;
   }
-  return process.env.PROMPT || 'You are Seraphina, a helpful AI assistant.';
+  return process.env.PROMPT;
 }
 
 export default async function handler(req, res) {

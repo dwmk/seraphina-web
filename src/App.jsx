@@ -238,7 +238,6 @@ export default function App() {
           </button>
 
           <div className="flex items-center gap-2">
-            <Logo size={26} variant={2} />
             <span className="font-bold text-base sm:text-lg">Seraphina</span>
           </div>
 

@@ -4,13 +4,13 @@ const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
 function getPrompts(version) {
   if (version === 'v1.4') {
     return {
-      system: process.env.PROMPT_V14 || process.env.PROMPT || 'You are Seraphina, a helpful AI assistant.',
-      special: process.env.SPECIALPROMPT_V14 || process.env.SPECIALPROMPT || process.env.PROMPT_V14 || process.env.PROMPT || 'You are Seraphina, a helpful AI assistant.',
+      system: process.env.PROMPT_V14,
+      special: process.env.SPECIALPROMPT_V14,
     };
   }
   return {
-    system: process.env.PROMPT || 'You are Seraphina, a helpful AI assistant.',
-    special: process.env.SPECIALPROMPT || process.env.PROMPT || 'You are Seraphina, a helpful AI assistant.',
+    system: process.env.PROMPT,
+    special: process.env.SPECIALPROMPT,
   };
 }
 
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
 
     const payload = {
       model: GROQ_MODEL,
-      temperature: 0.7, // You may want to lower this to 0.5 or 0.6 if she is still drifting
+      temperature: 0.6, // You may want to lower this to 0.5 or 0.6 if she is still drifting
       max_tokens: 1024,
       messages: [
         { role: 'system', content: contextualPrompt },

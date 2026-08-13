@@ -52,8 +52,7 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
         }`}
       >
         <div className={`p-4 flex items-center gap-3 border-b ${borderCol}`}>
-          <Logo size={32} variant={1} />
-          <span className={`font-bold text-lg ${textPrimary}`}>Seraphina</span>
+          <span className={`font-bold text-lg ${textPrimary}`}>Conversations</span>
           <button
             onClick={onClose}
             className={`ml-auto p-1.5 rounded-lg ${hoverBg} ${textSecondary} transition-colors`}
