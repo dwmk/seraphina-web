@@ -8,6 +8,9 @@ import { BlockScreen } from './components/BlockScreen';
 import { DeleteModal } from './components/DeleteModal';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import { fetchAIReply, verifyWifePassword, generateTitle } from './lib/api';
 import { TOOL_DEFINITIONS, executeTool, getBrowserInfo } from './lib/tools';
 import {
@@ -496,7 +499,8 @@ export default function App() {
                     }`}
                   >
                     <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
+                      remarkPlugins={[remarkGfm, remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
                       className="break-words space-y-2 text-sm sm:text-base"
                       components={{
                         // Discord-style paragraph line height

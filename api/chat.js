@@ -121,7 +121,7 @@ export default async function handler(req, res) {
       basePrompt += '\n\nIMPORTANT: You must respond ONLY with valid JSON formatting.';
     }
 
-    let contextualPrompt = `${basePrompt}\n\n--- CURRENT CONTEXT ---\nMaintain your established persona, instructions, and formatting strictly in your next response.`;
+    let contextualPrompt = `${basePrompt}\n\n--- CURRENT CONTEXT ---\nMaintain your established persona, instructions, and formatting strictly in your next response.\n\n--- MATH FORMATTING ---\nWhen writing mathematical expressions, use LaTeX notation wrapped in dollar signs. Use $...$ for inline math (e.g. $E = mc^2$) and $...$ for display/block math (e.g. $\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$). Always use \\frac for fractions, \\sum for summations, \\sqrt for roots, etc. Never use plain-text math notation like "x^2" or "1/2" when LaTeX is available.`;
 
     if (tools && Array.isArray(tools) && tools.length > 0) {
       const toolNames = tools.map(t => t.function.name).join(', ');
