@@ -1,15 +1,32 @@
-export async function fetchAIReply(messages, wifeMode = false, version = 'v1.6') {
+// src/lib/api.js
+export async function fetchAIReply(
+  messages, 
+  wifeMode = false, 
+  version = 'v1.6', 
+  options = {}
+) {
+  const { jsonMode = false, tools = null, temperature = 0.6 } = options;
+
   const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages, wifeMode, version }),
+    body: JSON.stringify({ 
+      messages, 
+      wifeMode, 
+      version, 
+      jsonMode, 
+      tools, 
+      temperature 
+    }),
   });
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || err.error || `Request failed (${res.status})`);
   }
+
   const data = await res.json();
-  return data.reply;
+  return data;
 }
 
 export async function verifyWifePassword(password) {

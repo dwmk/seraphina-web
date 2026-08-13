@@ -1,3 +1,4 @@
+// api/chat.js
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
 
@@ -18,7 +19,8 @@ function getPrompts(version) {
 let currentGroqKeyIndex = 0;
 let keysCountLogged = false;
 
-function getNextGroqKey() {
+// Helper to retrieve all configured GROQ keys in order
+function getGroqKeys() {
   const keys = Object.keys(process.env)
     .filter(k => k === 'GROQ' || k.match(/^GROQ_\d+$/))
     .sort((a, b) => {
@@ -30,28 +32,11 @@ function getNextGroqKey() {
     .map(k => process.env[k])
     .filter(Boolean); // Remove undefined/empty keys
 
-  if (keys.length === 0) {
-    console.log("0 flavors of snacks found.");
-    return null;
-  }
-
-  // Log how many total keys were discovered on warm/cold start once
-  if (!keysCountLogged) {
+  if (!keysCountLogged && keys.length > 0) {
     console.log(`${keys.length} flavors of snacks loaded.`);
     keysCountLogged = true;
   }
-
-  // Calculate 1-indexed number for "flavor #"
-  const flavorNumber = (currentGroqKeyIndex % keys.length) + 1;
-  const selectedKey = keys[currentGroqKeyIndex % keys.length];
-
-  // Log which flavor (API Key) is being used
-  console.log(`Used flavor #${flavorNumber}`);
-
-  // Increment and loop index
-  currentGroqKeyIndex = (currentGroqKeyIndex + 1) % keys.length;
-
-  return selectedKey;
+  return keys;
 }
 
 export default async function handler(req, res) {
@@ -62,25 +47,39 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const GROQ_API_KEY = getNextGroqKey();
-  if (!GROQ_API_KEY) return res.status(500).json({ error: 'GROQ API key not configured' });
+  const keys = getGroqKeys();
+  if (keys.length === 0) {
+    return res.status(500).json({ error: 'GROQ API key not configured' });
+  }
 
   try {
-    const { messages, wifeMode, version } = req.body || {};
+    const { 
+      messages, 
+      wifeMode, 
+      version, 
+      jsonMode = false, 
+      tools = null, 
+      temperature = 0.6 
+    } = req.body || {};
+
     const history = Array.isArray(messages) ? messages : [];
     const ver = version === 'v1.4' ? 'v1.4' : 'v1.6';
     const { system, special } = getPrompts(ver);
 
     // 1. Cap the memory to the last 10-15 messages to prevent prompt dilution
     const recentHistory = history.slice(-12);
+    let basePrompt = wifeMode ? special : system;
 
-    // 2. Re-introduce the contextual anchor block to reinforce the prompt
-    const basePrompt = wifeMode ? special : system;
+    if (jsonMode) {
+      basePrompt += '\n\nIMPORTANT: You must respond ONLY with valid JSON formatting.';
+    }
+
     const contextualPrompt = `${basePrompt}\n\n--- CURRENT CONTEXT ---\nMaintain your established persona, instructions, and formatting strictly in your next response.`;
 
+    // Construct full Groq payload with Llama 3.1 8B capabilities
     const payload = {
       model: GROQ_MODEL,
-      temperature: 0.6, // You may want to lower this to 0.5 or 0.6 if she is still drifting
+      temperature: temperature,
       max_tokens: 1024,
       messages: [
         { role: 'system', content: contextualPrompt },
@@ -88,20 +87,75 @@ export default async function handler(req, res) {
       ],
     };
 
-    const upstream = await fetch(GROQ_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_API_KEY}` },
-      body: JSON.stringify(payload),
-    });
-
-    if (!upstream.ok) {
-      const txt = await upstream.text();
-      return res.status(502).json({ error: 'Upstream error', detail: txt });
+    // 1. Enable Structured JSON Output if requested
+    if (jsonMode) {
+      payload.response_format = { type: 'json_object' };
     }
 
-    const data = await upstream.json();
-    const reply = data.choices?.[0]?.message?.content?.trim() || '';
+    // 2. Pass Tools / Function Calling schema if active
+    if (tools && Array.isArray(tools) && tools.length > 0) {
+      payload.tools = tools;
+      payload.tool_choice = 'auto';
+    }
+
+    // Attempt request across ALL available keys until one succeeds
+    let lastErrorDetail = null;
+    let upstreamSuccess = false;
+    let responseData = null;
+
+    for (let i = 0; i < keys.length; i++) {
+      const keyIndex = (currentGroqKeyIndex + i) % keys.length;
+      const apiKey = keys[keyIndex];
+
+      console.log(`Trying flavor #${keyIndex + 1}`);
+
+      try {
+        const upstream = await fetch(GROQ_URL, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json', 
+            'Authorization': `Bearer ${apiKey}` 
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (upstream.ok) {
+          responseData = await upstream.json();
+          // Update starting index for the next call to load-balance keys
+          currentGroqKeyIndex = (keyIndex + 1) % keys.length;
+          upstreamSuccess = true;
+          break; // Key worked, exit loop!
+        } else {
+          lastErrorDetail = await upstream.text();
+          console.warn(`Flavor #${keyIndex + 1} failed:`, lastErrorDetail);
+        }
+      } catch (err) {
+        lastErrorDetail = String(err);
+        console.warn(`Flavor #${keyIndex + 1} network exception:`, err);
+      }
+    }
+
+    // Only return error if ALL keys have been tried and failed
+    if (!upstreamSuccess) {
+      return res.status(502).json({ 
+        error: 'All GROQ API keys failed', 
+        detail: lastErrorDetail 
+      });
+    }
+
+    const choice = responseData.choices?.[0]?.message;
+    
+    // Handle Function Call / Tool Call response if triggered
+    if (choice?.tool_calls) {
+      return res.status(200).json({ 
+        toolCalls: choice.tool_calls, 
+        reply: choice.content || '' 
+      });
+    }
+
+    const reply = choice?.content?.trim() || '';
     return res.status(200).json({ reply });
+
   } catch (err) {
     return res.status(500).json({ error: 'Internal error', detail: String(err) });
   }

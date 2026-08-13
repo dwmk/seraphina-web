@@ -69,6 +69,11 @@ export default function App() {
   const [versionDropdown, setVersionDropdown] = useState(false);
   const [theme, setThemeState] = useState('light');
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [modelOptions, setModelOptions] = useState({
+    jsonMode: false,
+    toolCalling: false,
+    temperature: 0.6,
+  });
 
   const scrollRef = useRef(null);
 
@@ -214,9 +219,38 @@ export default function App() {
 
     setLoading(true);
     setError('');
+
     try {
-      const reply = await fetchAIReply(newMsgs, wifeMode, version);
-      const aiMsg = { role: 'assistant', content: reply };
+      // Define active tools if Tool Calling is enabled
+      const tools = modelOptions.toolCalling ? [
+        {
+          type: 'function',
+          function: {
+            name: 'get_current_weather',
+            description: 'Get current weather for a location',
+            parameters: {
+              type: 'object',
+              properties: { location: { type: 'string' } },
+              required: ['location'],
+            },
+          },
+        },
+      ] : null;
+
+      const data = await fetchAIReply(newMsgs, wifeMode, version, {
+        jsonMode: modelOptions.jsonMode,
+        temperature: modelOptions.temperature,
+        tools: tools,
+      });
+
+      let replyText = data.reply;
+
+      // Handle tool execution response display
+      if (data.toolCalls) {
+        replyText = `🛠️ **Tool Call Triggered:**\n\`\`\`json\n${JSON.stringify(data.toolCalls, null, 2)}\n\`\`\``;
+      }
+
+      const aiMsg = { role: 'assistant', content: replyText };
       const finalMsgs = [...newMsgs, aiMsg];
       setMessages(finalMsgs);
       persistMessages(convId, finalMsgs);
@@ -486,6 +520,8 @@ export default function App() {
           wifeMode={wifeMode}
           onToggleWifeMode={handleToggleWifeMode}
           theme={theme}
+          options={modelOptions}
+          onOptionsChange={setModelOptions}
         />
       </div>
 
