@@ -2,6 +2,52 @@
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
 
+const TOOL_ALIASES = {
+  brave_search: 'web_search',
+  search: 'web_search',
+  google_search: 'web_search',
+  ddg_search: 'web_search',
+  bing_search: 'web_search',
+  wiki: 'wikipedia_search',
+  wikipedia: 'wikipedia_search',
+  wiki_search: 'wikipedia_search',
+  internet_search: 'web_search',
+  web_lookup: 'web_search',
+};
+
+function parseTextToolCalls(content) {
+  if (!content || typeof content !== 'string') return null;
+
+  const regex = /<function=(\w+)>\s*([\s\S]*?)<\/function>/g;
+  const calls = [];
+  let match;
+  let firstIndex = content.length;
+  let lastIndex = 0;
+
+  while ((match = regex.exec(content)) !== null) {
+    let name = match[1];
+    if (TOOL_ALIASES[name]) name = TOOL_ALIASES[name];
+
+    let rawArgs = match[2].trim();
+    try { JSON.parse(rawArgs); } catch { rawArgs = '{}'; }
+
+    calls.push({
+      id: `text_call_${calls.length}`,
+      function: { name, arguments: rawArgs },
+    });
+    firstIndex = Math.min(firstIndex, match.index);
+    lastIndex = Math.max(lastIndex, regex.lastIndex);
+  }
+
+  if (calls.length === 0) return null;
+
+  const textBefore = content.slice(0, firstIndex).trim();
+  const textAfter = content.slice(lastIndex).trim();
+  const reply = [textBefore, textAfter].filter(Boolean).join('\n\n');
+
+  return { toolCalls: calls, reply };
+}
+
 function getPrompts(version) {
   if (version === 'v1.4') {
     return {
@@ -75,7 +121,12 @@ export default async function handler(req, res) {
       basePrompt += '\n\nIMPORTANT: You must respond ONLY with valid JSON formatting.';
     }
 
-    const contextualPrompt = `${basePrompt}\n\n--- CURRENT CONTEXT ---\nMaintain your established persona, instructions, and formatting strictly in your next response.`;
+    let contextualPrompt = `${basePrompt}\n\n--- CURRENT CONTEXT ---\nMaintain your established persona, instructions, and formatting strictly in your next response.`;
+
+    if (tools && Array.isArray(tools) && tools.length > 0) {
+      const toolNames = tools.map(t => t.function.name).join(', ');
+      contextualPrompt += `\n\n--- TOOL USE INSTRUCTIONS ---\nYou have access to these tools: ${toolNames}.\nWhen the user asks for real-time data (weather, time, prices, web search, etc.), you MUST call the appropriate tool instead of guessing.\nOnly call tools from the list above. Do NOT invent tool names like "brave_search" or "google_search" — use "web_search" for web lookups and "wikipedia_search" for encyclopedic info.\nCall tools using the standard function-calling format provided by the system.`;
+    }
 
     // Construct full Groq payload with Llama 3.1 8B capabilities
     const payload = {
@@ -146,11 +197,25 @@ export default async function handler(req, res) {
 
     const choice = responseData.choices?.[0]?.message;
     
-    // Handle Function Call / Tool Call response if triggered
-    if (choice?.tool_calls) {
+    // Handle structured Function Call / Tool Call response
+    if (choice?.tool_calls && Array.isArray(choice.tool_calls) && choice.tool_calls.length > 0) {
+      const mappedCalls = choice.tool_calls.map(tc => {
+        let name = tc.function?.name || '';
+        if (TOOL_ALIASES[name]) name = TOOL_ALIASES[name];
+        return { ...tc, function: { ...tc.function, name } };
+      });
       return res.status(200).json({ 
-        toolCalls: choice.tool_calls, 
+        toolCalls: mappedCalls, 
         reply: choice.content || '' 
+      });
+    }
+
+    // Fallback: parse text-based tool calls from content
+    const textParsed = parseTextToolCalls(choice?.content || '');
+    if (textParsed) {
+      return res.status(200).json({ 
+        toolCalls: textParsed.toolCalls, 
+        reply: textParsed.reply 
       });
     }
 

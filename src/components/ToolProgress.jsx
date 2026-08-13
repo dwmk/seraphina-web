@@ -7,6 +7,8 @@ const TOOL_LABELS = {
   get_ip_info: 'Network Info',
   get_browser_info: 'Browser Info',
   get_crypto_price: 'Crypto Price',
+  web_search: 'Web Search',
+  wikipedia_search: 'Wikipedia',
 };
 
 export function ToolProgressDisplay({ progress, isDark }) {

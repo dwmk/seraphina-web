@@ -57,6 +57,34 @@ export const TOOL_DEFINITIONS = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'web_search',
+      description: 'Search the web for current information. Returns the top search results with titles, URLs, and snippets. Use this for any question about recent events, facts, lyrics, news, or anything you are not certain about. Do NOT use this for weather, time, crypto prices, or browser info — use the dedicated tools for those.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'The search query, e.g. "Alan Walker Faded lyrics"' },
+        },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'wikipedia_search',
+      description: 'Search Wikipedia and return a summary article. Use this for encyclopedic information about people, places, concepts, history, science, etc. Returns the article title and a text summary.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'The topic to search for on Wikipedia, e.g. "Albert Einstein", "World War II"' },
+        },
+        required: ['query'],
+      },
+    },
+  },
 ];
 
 export function getBrowserInfo() {
@@ -155,6 +183,12 @@ export async function executeTool(name, args = {}, browserInfo = null) {
         break;
       case 'get_crypto_price':
         result = await executeCryptoPrice(args.symbol);
+        break;
+      case 'web_search':
+        result = await executeWebSearch(args.query);
+        break;
+      case 'wikipedia_search':
+        result = await executeWikipediaSearch(args.query);
         break;
       default:
         result = { error: `Unknown tool: ${name}` };
@@ -260,5 +294,53 @@ async function executeCryptoPrice(symbol) {
     currency: data.data.currency,
     base: data.data.base,
     source: 'Coinbase',
+  };
+}
+
+async function executeWebSearch(query) {
+  if (!query) return { error: 'Query is required' };
+
+  const res = await fetch('/api/web-search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+
+  if (!res.ok) return { error: 'Web search failed' };
+  const data = await res.json();
+  if (data.error) return { error: data.error };
+
+  return {
+    query,
+    results: data.results || [],
+    source: data.source || 'DuckDuckGo',
+  };
+}
+
+async function executeWikipediaSearch(query) {
+  if (!query) return { error: 'Query is required' };
+
+  const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*&srlimit=1`;
+  const searchRes = await fetch(searchUrl);
+  if (!searchRes.ok) return { error: 'Wikipedia search failed' };
+  const searchData = await searchRes.json();
+  const searchResults = searchData.query?.search;
+  if (!searchResults || searchResults.length === 0) return { query, error: 'No Wikipedia article found for this topic.' };
+
+  const title = searchResults[0].title;
+  const pageId = searchResults[0].pageid;
+
+  const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+  const summaryRes = await fetch(summaryUrl);
+  if (!summaryRes.ok) return { error: 'Failed to fetch Wikipedia summary' };
+  const summaryData = await summaryRes.json();
+
+  return {
+    query,
+    title: summaryData.title,
+    extract: summaryData.extract,
+    url: summaryData.content_urls?.desktop?.page || `https://en.wikipedia.org/?curid=${pageId}`,
+    thumbnail: summaryData.thumbnail?.source || null,
+    source: 'Wikipedia',
   };
 }
