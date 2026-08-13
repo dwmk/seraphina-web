@@ -236,7 +236,7 @@ export default function App() {
         const data = await fetchAIReply(conversationHistory, wifeMode, version, {
           jsonMode: modelOptions.jsonMode,
           temperature: modelOptions.temperature,
-          tools: tools,
+          tools: round === 0 ? tools : null,
         });
 
         if (!data.toolCalls || !Array.isArray(data.toolCalls) || data.toolCalls.length === 0) {
@@ -252,18 +252,17 @@ export default function App() {
           break;
         }
 
-        const assistantMsg = {
-          role: 'assistant',
-          content: data.reply || '',
-          tool_calls: data.toolCalls,
-        };
-        conversationHistory.push(assistantMsg);
+        if (data.reply) {
+          conversationHistory.push({ role: 'assistant', content: data.reply });
+        }
 
         const toolProgressList = data.toolCalls.map((tc) => ({
           name: tc.function?.name || 'unknown',
           status: 'pending',
         }));
         setToolProgress({ phase: 'calling_tools', tools: toolProgressList });
+
+        const toolResultParts = [];
 
         for (let i = 0; i < data.toolCalls.length; i++) {
           const tc = data.toolCalls[i];
@@ -279,15 +278,15 @@ export default function App() {
           toolProgressList[i].status = 'done';
           setToolProgress({ phase: 'calling_tools', tools: [...toolProgressList] });
 
-          conversationHistory.push({
-            role: 'tool',
-            tool_call_id: tc.id,
-            name: toolName,
-            content: result,
-          });
+          toolResultParts.push(`[Tool: ${toolName}]\nArguments: ${JSON.stringify(parsedArgs)}\nResult: ${result}`);
         }
 
         setToolProgress({ phase: 'processing_results' });
+
+        conversationHistory.push({
+          role: 'user',
+          content: `Here are the real-time tool results. Use this data to answer the user's question. Do NOT call any more tools — just respond naturally using this data.\n\n${toolResultParts.join('\n\n')}`,
+        });
       }
 
       if (!gotFinalReply) {
