@@ -8,8 +8,9 @@ function getPromptForVersion(version) {
   return process.env.PROMPT;
 }
 
-// Add this outside the handler function to persist index during warm invocations
+// Keep track of the current index and whether the initial key scan was logged
 let currentGroqKeyIndex = 0;
+let keysCountLogged = false;
 
 function getNextGroqKey() {
   const keys = Object.keys(process.env)
@@ -23,11 +24,27 @@ function getNextGroqKey() {
     .map(k => process.env[k])
     .filter(Boolean); // Remove undefined/empty keys
 
-  if (keys.length === 0) return null;
+  if (keys.length === 0) {
+    console.log("0 flavors of snacks found.");
+    return null;
+  }
 
+  // Log how many total keys were discovered on warm/cold start once
+  if (!keysCountLogged) {
+    console.log(`${keys.length} flavors of snacks loaded.`);
+    keysCountLogged = true;
+  }
+
+  // Calculate 1-indexed number for "flavor #"
+  const flavorNumber = (currentGroqKeyIndex % keys.length) + 1;
   const selectedKey = keys[currentGroqKeyIndex % keys.length];
+
+  // Log which flavor (API Key) is being used
+  console.log(`Used flavor #${flavorNumber}`);
+
+  // Increment and loop index
   currentGroqKeyIndex = (currentGroqKeyIndex + 1) % keys.length;
-  
+
   return selectedKey;
 }
 
