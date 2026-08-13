@@ -8,6 +8,29 @@ function getPromptForVersion(version) {
   return process.env.PROMPT;
 }
 
+// Add this outside the handler function to persist index during warm invocations
+let currentGroqKeyIndex = 0;
+
+function getNextGroqKey() {
+  const keys = Object.keys(process.env)
+    .filter(k => k === 'GROQ' || k.match(/^GROQ_\d+$/))
+    .sort((a, b) => {
+      if (a === 'GROQ') return -1;
+      if (b === 'GROQ') return 1;
+      // Sort numerically for GROQ_2, GROQ_3, etc.
+      return parseInt(a.split('_')[1]) - parseInt(b.split('_')[1]);
+    })
+    .map(k => process.env[k])
+    .filter(Boolean); // Remove undefined/empty keys
+
+  if (keys.length === 0) return null;
+
+  const selectedKey = keys[currentGroqKeyIndex % keys.length];
+  currentGroqKeyIndex = (currentGroqKeyIndex + 1) % keys.length;
+  
+  return selectedKey;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -16,7 +39,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const GROQ_API_KEY = process.env.GROQ || '';
+  const GROQ_API_KEY = getNextGroqKey();
   if (!GROQ_API_KEY) return res.status(500).json({ error: 'GROQ API key not configured' });
 
   try {

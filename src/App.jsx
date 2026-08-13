@@ -40,7 +40,28 @@ export default function App() {
     setWifeMode(isWifeEnabled());
     setRateInfo(getRateInfo());
     setThemeState(getTheme());
+
+    // URL Parameter handling for unique chat ID
+    const params = new URLSearchParams(window.location.search);
+    const urlChatId = params.get('chat');
+    if (urlChatId && convs.some((c) => c.id === urlChatId)) {
+      setActiveId(urlChatId);
+    } else if (urlChatId) {
+      // Chat not found, clear invalid URL parameter
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, []);
+
+  // Add this new useEffect right beneath it to update the URL dynamically:
+  useEffect(() => {
+    const url = new URL(window.location);
+    if (activeId) {
+      url.searchParams.set('chat', activeId);
+    } else {
+      url.searchParams.delete('chat');
+    }
+    window.history.replaceState({}, '', url);
+  }, [activeId]);
 
   useEffect(() => {
     if (!activeId) { setMessages([]); return; }
@@ -83,7 +104,8 @@ export default function App() {
   };
 
   const handleRename = (id, newTitle) => {
-    updateConversation(id, (c) => ({ ...c, title: newTitle }));
+    // Add customTitle: true to prevent auto-generation overrides
+    updateConversation(id, (c) => ({ ...c, title: newTitle, customTitle: true }));
     setConversations(loadConversations());
   };
 
@@ -110,6 +132,11 @@ export default function App() {
 
   const maybeGenerateTitle = async (convId, msgs) => {
     if (!msgs || msgs.length === 0 || msgs.length % 5 !== 0) return;
+    
+    // Ignore generation if the user has manually renamed the title
+    const activeConv = conversations.find((c) => c.id === convId);
+    if (activeConv?.customTitle) return;
+
     try {
       const title = await generateTitle(msgs, version);
       if (title) {
@@ -123,11 +150,23 @@ export default function App() {
 
   const handleSend = async (text) => {
     let convId = activeId;
+    let currentConvs = conversations;
+    
     if (!convId) {
       const conv = createConversation('New chat');
       convId = conv.id;
-      setConversations(loadConversations());
+      currentConvs = loadConversations();
+      setConversations(currentConvs);
       setActiveId(convId);
+    }
+
+    // Number conversations as "Chat #X" on the first message sent
+    const activeConv = currentConvs.find(c => c.id === convId);
+    if (activeConv && activeConv.title === 'New chat' && messages.length === 0) {
+      const newTitle = `Chat #${currentConvs.length}`;
+      updateConversation(convId, (c) => ({ ...c, title: newTitle }));
+      currentConvs = loadConversations();
+      setConversations(currentConvs);
     }
 
     const userMsg = { role: 'user', content: text };
