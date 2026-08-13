@@ -59,7 +59,7 @@ export function ChatInput({
                 className={`absolute bottom-full left-0 mb-3 w-72 p-3 border rounded-2xl shadow-2xl z-30 ${menuBg}`}
               >
                 <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2 px-1">
-                  Llama 3.1 Capabilities
+                  Extra Capabilities
                 </div>
 
                 {/* 1. Structured JSON Mode Toggle */}
@@ -129,7 +129,8 @@ export function ChatInput({
           <button
             type="button"
             onClick={() => setMenuOpen((v) => !v)}
-            className={`p-2 rounded-full transition-transform active:scale-95 ${plusBtnClass} ${menuOpen ? 'rotate-45' : ''}`}
+            // ADDED: mb-0.5 sm:mb-1 to nudge the icon upward
+            className={`p-2 mb-0.5 sm:mb-1 rounded-full transition-transform active:scale-95 ${plusBtnClass} ${menuOpen ? 'rotate-45' : ''}`}
             title="Model Capabilities & Tools"
           >
             <Plus size={20} weight="bold" />

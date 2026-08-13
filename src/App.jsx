@@ -182,7 +182,8 @@ export default function App() {
 
     try {
       const title = await generateTitle(msgs, version);
-      if (title) {
+      // ADDED: Only update if we got a real title back that isn't the default
+      if (title && title !== 'New chat') {
         updateConversation(convId, (c) => ({ ...c, title }));
         setConversations(loadConversations());
       }

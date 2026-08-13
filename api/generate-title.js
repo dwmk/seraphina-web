@@ -91,7 +91,11 @@ export default async function handler(req, res) {
     if (!upstream.ok) return res.status(502).json({ error: 'Upstream error' });
 
     const data = await upstream.json();
-    const title = (data.choices?.[0]?.message?.content?.trim() || 'New chat').slice(0, 60);
+    
+    // MODIFIED: Return null instead of 'New chat' if content is missing
+    const rawTitle = data.choices?.[0]?.message?.content?.trim();
+    const title = rawTitle ? rawTitle.slice(0, 60) : null;
+    
     return res.status(200).json({ title });
   } catch (err) {
     return res.status(500).json({ error: 'Internal error' });
