@@ -66,8 +66,9 @@ export default async function handler(req, res) {
     const ver = version === 'v1.4' ? 'v1.4' : 'v1.6';
     const { system, special } = getPrompts(ver);
 
-    // 1. Cap the memory to the last 10-15 messages to prevent prompt dilution
-    const recentHistory = history.slice(-12);
+    // 1. Cap the memory to prevent prompt dilution (allow more when tools are active)
+    const cap = tools && Array.isArray(tools) && tools.length > 0 ? 25 : 12;
+    const recentHistory = history.slice(-cap);
     let basePrompt = wifeMode ? special : system;
 
     if (jsonMode) {

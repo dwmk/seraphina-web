@@ -9,10 +9,12 @@ import { DeleteModal } from './components/DeleteModal';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { fetchAIReply, verifyWifePassword, generateTitle } from './lib/api';
+import { TOOL_DEFINITIONS, executeTool, getBrowserInfo } from './lib/tools';
 import {
   loadConversations, createConversation, deleteConversation, updateConversation,
   getRateInfo, recordMessage, isWifeEnabled, setWifeEnabled, getTheme, setTheme,
 } from './lib/storage';
+import { ToolProgressDisplay } from './components/ToolProgress';
 
 const VERSIONS = ['v1.6', 'v1.4'];
 const GENERIC_ERROR = "Action could not be completed. Seraphina couldn't receive your message or she couldn't react to it.";
@@ -74,6 +76,7 @@ export default function App() {
     toolCalling: false,
     temperature: 0.6,
   });
+  const [toolProgress, setToolProgress] = useState(null);
 
   const scrollRef = useRef(null);
 
@@ -220,50 +223,94 @@ export default function App() {
 
     setLoading(true);
     setError('');
+    setToolProgress({ phase: 'thinking' });
+
+    const tools = modelOptions.toolCalling ? TOOL_DEFINITIONS : null;
+    const browserInfo = getBrowserInfo();
+    const MAX_TOOL_ROUNDS = 5;
+    let conversationHistory = [...newMsgs];
+    let gotFinalReply = false;
 
     try {
-      // Define active tools if Tool Calling is enabled
-      const tools = modelOptions.toolCalling ? [
-        {
-          type: 'function',
-          function: {
-            name: 'get_current_weather',
-            description: 'Get current weather for a location',
-            parameters: {
-              type: 'object',
-              properties: { location: { type: 'string' } },
-              required: ['location'],
-            },
-          },
-        },
-      ] : null;
+      for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
+        const data = await fetchAIReply(conversationHistory, wifeMode, version, {
+          jsonMode: modelOptions.jsonMode,
+          temperature: modelOptions.temperature,
+          tools: tools,
+        });
 
-      const data = await fetchAIReply(newMsgs, wifeMode, version, {
-        jsonMode: modelOptions.jsonMode,
-        temperature: modelOptions.temperature,
-        tools: tools,
-      });
+        if (!data.toolCalls || !Array.isArray(data.toolCalls) || data.toolCalls.length === 0) {
+          const replyText = data.reply || '';
+          const aiMsg = { role: 'assistant', content: replyText };
+          const finalMsgs = [...newMsgs, aiMsg];
+          setMessages(finalMsgs);
+          persistMessages(convId, finalMsgs);
+          const info = recordMessage();
+          setRateInfo(info);
+          maybeGenerateTitle(convId, finalMsgs);
+          gotFinalReply = true;
+          break;
+        }
 
-      let replyText = data.reply;
+        const assistantMsg = {
+          role: 'assistant',
+          content: data.reply || '',
+          tool_calls: data.toolCalls,
+        };
+        conversationHistory.push(assistantMsg);
 
-      // Handle tool execution response display
-      if (data.toolCalls) {
-        replyText = `🛠️ **Tool Call Triggered:**\n\`\`\`json\n${JSON.stringify(data.toolCalls, null, 2)}\n\`\`\``;
+        const toolProgressList = data.toolCalls.map((tc) => ({
+          name: tc.function?.name || 'unknown',
+          status: 'pending',
+        }));
+        setToolProgress({ phase: 'calling_tools', tools: toolProgressList });
+
+        for (let i = 0; i < data.toolCalls.length; i++) {
+          const tc = data.toolCalls[i];
+          const toolName = tc.function?.name || 'unknown';
+          let parsedArgs = {};
+          try { parsedArgs = JSON.parse(tc.function?.arguments || '{}'); } catch {}
+
+          toolProgressList[i].status = 'executing';
+          setToolProgress({ phase: 'calling_tools', tools: [...toolProgressList] });
+
+          const result = await executeTool(toolName, parsedArgs, browserInfo);
+
+          toolProgressList[i].status = 'done';
+          setToolProgress({ phase: 'calling_tools', tools: [...toolProgressList] });
+
+          conversationHistory.push({
+            role: 'tool',
+            tool_call_id: tc.id,
+            name: toolName,
+            content: result,
+          });
+        }
+
+        setToolProgress({ phase: 'processing_results' });
       }
 
-      const aiMsg = { role: 'assistant', content: replyText };
-      const finalMsgs = [...newMsgs, aiMsg];
-      setMessages(finalMsgs);
-      persistMessages(convId, finalMsgs);
-
-      const info = recordMessage();
-      setRateInfo(info);
-
-      maybeGenerateTitle(convId, finalMsgs);
+      if (!gotFinalReply) {
+        setToolProgress({ phase: 'thinking_after_tools' });
+        const finalData = await fetchAIReply(conversationHistory, wifeMode, version, {
+          jsonMode: modelOptions.jsonMode,
+          temperature: modelOptions.temperature,
+          tools: null,
+        });
+        const replyText = finalData.reply || 'I was unable to process the tool results.';
+        const aiMsg = { role: 'assistant', content: replyText };
+        const finalMsgs = [...newMsgs, aiMsg];
+        setMessages(finalMsgs);
+        persistMessages(convId, finalMsgs);
+        const info = recordMessage();
+        setRateInfo(info);
+        maybeGenerateTitle(convId, finalMsgs);
+      }
     } catch {
       setError(GENERIC_ERROR);
     } finally {
       setLoading(false);
+      setToolProgress(null);
     }
   };
 
@@ -496,12 +543,8 @@ export default function App() {
                 <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl ${logoBox} border flex items-center justify-center shrink-0 mt-1 overflow-hidden`}>
                   <Logo size={56} variant={2} overflow />
                 </div>
-                <div className={`px-4 sm:px-5 py-4 rounded-2xl ${aiBubble} border`}>
-                  <div className="flex gap-1.5">
-                    <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
+                <div className={`px-4 sm:px-5 py-4 rounded-2xl ${aiBubble} border min-h-[56px] flex items-center`}>
+                  <ToolProgressDisplay progress={toolProgress || { phase: 'thinking' }} isDark={isDark} />
                 </div>
               </motion.div>
             )}
