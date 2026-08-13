@@ -17,6 +17,44 @@ import {
 const VERSIONS = ['v1.6', 'v1.4'];
 const GENERIC_ERROR = "Action could not be completed. Seraphina couldn't receive your message or she couldn't react to it.";
 
+function TalkingAvatar({ logoBox, size = 56 }) {
+  const [variant, setVariant] = useState(1);
+
+  useEffect(() => {
+    let timeoutId;
+    const startTime = Date.now();
+    const DURATION = 3000; // 3 seconds total
+
+    const cycle = () => {
+      const elapsed = Date.now() - startTime;
+
+      if (elapsed >= DURATION) {
+        setVariant(1); // Ensure it strictly ends on variant 1
+        return;
+      }
+
+      // Toggle between variant 1 and 2
+      setVariant((prev) => (prev === 1 ? 2 : 1));
+
+      // Rhythmic & slightly unpredictable delay interval (130ms to 260ms)
+      const nextDelay = Math.floor(Math.random() * (260 - 130 + 1)) + 130;
+      timeoutId = setTimeout(cycle, nextDelay);
+    };
+
+    // Kick off initial switch from 1 -> 2
+    const initialDelay = Math.floor(Math.random() * (260 - 130 + 1)) + 130;
+    timeoutId = setTimeout(cycle, initialDelay);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  return (
+    <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl ${logoBox} border flex items-center justify-center shrink-0 mt-1 overflow-hidden`}>
+      <Logo size={size} variant={variant} overflow />
+    </div>
+  );
+}
+
 export default function App() {
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
@@ -367,9 +405,7 @@ export default function App() {
                   className={`flex gap-2 sm:gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {msg.role === 'assistant' && (
-                    <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl ${logoBox} border flex items-center justify-center shrink-0 mt-1 overflow-hidden`}>
-                      <Logo size={56} variant={2} overflow />
-                    </div>
+                    <TalkingAvatar logoBox={logoBox} size={56} />
                   )}
                   <div
                     className={`group/msg max-w-[85%] sm:max-w-[80%] px-4 sm:px-5 py-3 rounded-2xl text-sm sm:text-base leading-relaxed transition-all duration-200 cursor-default ${
