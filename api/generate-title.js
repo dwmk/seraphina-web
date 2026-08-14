@@ -1,51 +1,12 @@
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
+// api/generate-title.js
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.1:8b';
 
 function getPromptForVersion(version) {
   if (version === 'v1.4') {
     return process.env.PROMPT_V14;
   }
   return process.env.PROMPT;
-}
-
-// Keep track of the current index and whether the initial key scan was logged
-let currentGroqKeyIndex = 0;
-let keysCountLogged = false;
-
-function getNextGroqKey() {
-  const keys = Object.keys(process.env)
-    .filter(k => k === 'GROQ' || k.match(/^GROQ_\d+$/))
-    .sort((a, b) => {
-      if (a === 'GROQ') return -1;
-      if (b === 'GROQ') return 1;
-      // Sort numerically for GROQ_2, GROQ_3, etc.
-      return parseInt(a.split('_')[1]) - parseInt(b.split('_')[1]);
-    })
-    .map(k => process.env[k])
-    .filter(Boolean); // Remove undefined/empty keys
-
-  if (keys.length === 0) {
-    console.log("0 flavors of snacks found.");
-    return null;
-  }
-
-  // Log how many total keys were discovered on warm/cold start once
-  if (!keysCountLogged) {
-    console.log(`${keys.length} flavors of snacks loaded.`);
-    keysCountLogged = true;
-  }
-
-  // Calculate 1-indexed number for "flavor #"
-  const flavorNumber = (currentGroqKeyIndex % keys.length) + 1;
-  const selectedKey = keys[currentGroqKeyIndex % keys.length];
-
-  // Log which flavor (API Key) is being used
-  console.log(`Used flavor #${flavorNumber}`);
-
-  // Increment and loop index
-  currentGroqKeyIndex = (currentGroqKeyIndex + 1) % keys.length;
-
-  return selectedKey;
 }
 
 export default async function handler(req, res) {
@@ -55,9 +16,6 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-
-  const GROQ_API_KEY = getNextGroqKey();
-  if (!GROQ_API_KEY) return res.status(500).json({ error: 'GROQ API key not configured' });
 
   try {
     const { messages, version } = req.body || {};
@@ -73,7 +31,7 @@ export default async function handler(req, res) {
     );
 
     const payload = {
-      model: GROQ_MODEL,
+      model: OLLAMA_MODEL,
       temperature: 0.3,
       max_tokens: 30,
       messages: [
@@ -82,17 +40,19 @@ export default async function handler(req, res) {
       ],
     };
 
-    const upstream = await fetch(GROQ_URL, {
+    const endpoint = `${OLLAMA_BASE_URL.replace(/\/$/, '')}/v1/chat/completions`;
+    const upstream = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_API_KEY}` },
+      headers: { 
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true'
+      },
       body: JSON.stringify(payload),
     });
 
     if (!upstream.ok) return res.status(502).json({ error: 'Upstream error' });
 
     const data = await upstream.json();
-    
-    // MODIFIED: Return null instead of 'New chat' if content is missing
     const rawTitle = data.choices?.[0]?.message?.content?.trim();
     const title = rawTitle ? rawTitle.slice(0, 60) : null;
     
