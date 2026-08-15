@@ -2,11 +2,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Trash, Warning } from '@phosphor-icons/react';
 
-export function DeleteModal({ conversation, theme, onConfirm, onCancel }) {
+export function DeleteModal({ conversation, onConfirm, onCancel }) {
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
   const intervalRef = useRef(null);
-  const isDark = theme === 'dark';
 
   const HOLD_MS = 5000;
   const TICK_MS = 50;
@@ -41,12 +40,6 @@ export function DeleteModal({ conversation, theme, onConfirm, onCancel }) {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, []);
 
-  const modalBg = isDark ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200';
-  const textPrimary = isDark ? 'text-white' : 'text-zinc-900';
-  const textMuted = isDark ? 'text-zinc-500' : 'text-zinc-400';
-  const btnBg = isDark ? 'bg-zinc-800' : 'bg-zinc-100';
-  const holdBg = isDark ? 'bg-zinc-800 border-white/10' : 'bg-zinc-100 border-zinc-300';
-
   return (
     <AnimatePresence>
       <motion.div
@@ -61,18 +54,18 @@ export function DeleteModal({ conversation, theme, onConfirm, onCancel }) {
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.9, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className={`${modalBg} border rounded-3xl max-w-sm w-full p-8 shadow-2xl text-center`}
+          className="border rounded-3xl max-w-sm w-full p-8 shadow-2xl text-center themed-modal"
         >
           <div className="flex justify-center mb-4">
             <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center">
               <Trash size={28} className="text-red-500" weight="duotone" />
             </div>
           </div>
-          <h3 className={`text-xl font-bold mb-2 ${textPrimary}`}>Delete conversation?</h3>
-          <p className={`text-sm mb-1 ${textMuted}`}>
+          <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--modal-text)' }}>Delete conversation?</h3>
+          <p className="text-sm mb-1 themed-modal-muted">
             "{conversation?.title || 'New chat'}" and all its messages will be permanently deleted.
           </p>
-          <p className={`text-xs mb-6 ${textMuted} flex items-center justify-center gap-1.5`}>
+          <p className="text-xs mb-6 flex items-center justify-center gap-1.5 themed-modal-muted">
             <Warning size={14} className="text-amber-400" />
             Hold the button below for 5 seconds to confirm
           </p>
@@ -82,7 +75,8 @@ export function DeleteModal({ conversation, theme, onConfirm, onCancel }) {
             onPointerUp={stop}
             onPointerLeave={stop}
             onPointerCancel={stop}
-            className={`relative w-full h-14 rounded-2xl border overflow-hidden select-none touch-none transition-colors ${holdBg} ${textPrimary}`}
+            className="relative w-full h-14 rounded-2xl border overflow-hidden select-none touch-none transition-colors themed-hold-btn"
+            style={{ color: 'var(--modal-text)' }}
           >
             <div
               className="absolute inset-0 bg-red-500 origin-left"
@@ -95,7 +89,7 @@ export function DeleteModal({ conversation, theme, onConfirm, onCancel }) {
 
           <button
             onClick={onCancel}
-            className={`w-full py-2 mt-3 text-sm ${textMuted} hover:text-red-400 transition-colors`}
+            className="w-full py-2 mt-3 text-sm themed-modal-muted hover:text-red-400 transition-colors"
           >
             Cancel
           </button>

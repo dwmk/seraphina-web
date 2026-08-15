@@ -234,18 +234,24 @@ export async function executeTool(name, args = {}, browserInfo = null) {
   }
 }
 
-// Handler for generating images via a free API or local Stable Diffusion endpoint
+// Handler for generating images via the existing Ollama vision model
 async function executeGenerateImage(prompt) {
   if (!prompt) return { error: 'Prompt is required' };
-  
-  // Example using Pollinations.ai or your local ComfyUI/AUTOMATIC1111 endpoint
-  const encodedPrompt = encodeURIComponent(prompt);
-  const imageUrl = `https://pollinations.ai/p/${encodedPrompt}?width=1024&height=1024&seed=${Math.floor(Math.random() * 1000000)}`;
-  
+
+  const res = await fetch('/api/generate-image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt }),
+  });
+
+  if (!res.ok) return { error: 'Image generation failed' };
+  const data = await res.json();
+  if (data.error) return { error: data.error };
+
   return {
     status: 'success',
-    markdown_image: `![${prompt}](${imageUrl})`,
-    message: `Image generated successfully. Embed this exact markdown in your final response: ![${prompt}](${imageUrl})`,
+    description: data.description,
+    message: data.message,
   };
 }
 

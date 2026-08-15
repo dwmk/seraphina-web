@@ -64,3 +64,53 @@ body {
   background: rgba(128,128,128,0.3);
   border-radius: 2px;
 }
+
+/* Theme-aware utility classes (driven by CSS custom properties from themes.js) */
+.themed-bg { background: var(--bg-base); }
+.themed-text { color: var(--text-base); }
+.themed-header { background: var(--header-bg); border-color: var(--header-border); }
+.themed-user-bubble { background: var(--user-bubble-bg); color: var(--user-bubble-text); }
+.themed-ai-bubble { background: var(--ai-bubble-bg); border-color: var(--ai-bubble-border); color: var(--ai-bubble-text); }
+.themed-ai-bubble:hover { background: var(--ai-bubble-hover-bg); border-color: var(--ai-bubble-hover-border); }
+.themed-logo-box { background: var(--logo-box-bg); border-color: var(--logo-box-border); }
+.themed-version-btn { background: var(--version-btn-bg); color: var(--version-btn-text); }
+.themed-version-btn:hover { background: var(--version-btn-hover-bg); }
+.themed-dropdown { background: var(--dropdown-bg); border-color: var(--dropdown-border); }
+.themed-version-active { background: var(--version-active-bg); color: var(--version-active-text); }
+.themed-version-inactive { color: var(--version-inactive-text); }
+.themed-version-inactive:hover { background: var(--version-inactive-hover-bg); }
+.themed-error { background: var(--error-bg); border-color: var(--error-border); color: var(--error-text); }
+.themed-welcome-text { color: var(--welcome-text); }
+.themed-welcome-sub { color: var(--welcome-sub); }
+.themed-burger { color: var(--burger-text); }
+.themed-burger:hover { color: var(--burger-hover-text); background: var(--burger-hover-bg); }
+.themed-btn { background: var(--btn-bg); color: var(--btn-text); }
+.themed-btn:hover { background: var(--btn-hover-bg); }
+.themed-input { background: var(--input-bg); border-color: var(--input-border); color: var(--input-text); }
+.themed-input::placeholder { color: var(--input-placeholder); }
+.themed-input:focus-within { border-color: var(--input-focus-border); }
+.themed-send-btn { background: var(--send-btn-bg); color: var(--send-btn-text); }
+.themed-send-btn:hover { background: var(--send-btn-hover); }
+.themed-menu { background: var(--menu-bg); border-color: var(--menu-border); color: var(--menu-text); }
+.themed-sidebar-panel { background: var(--sidebar-bg); border-color: var(--sidebar-border); }
+.themed-sidebar-text { color: var(--sidebar-text); }
+.themed-sidebar-secondary { color: var(--sidebar-text-secondary); }
+.themed-sidebar-muted { color: var(--sidebar-text-muted); }
+.themed-sidebar-hover:hover { background: var(--sidebar-hover-bg); }
+.themed-sidebar-active { background: var(--sidebar-active-bg); color: var(--sidebar-text); }
+.themed-sidebar-input { background: var(--sidebar-input-bg); color: var(--sidebar-input-text); border-color: var(--sidebar-input-border); }
+.themed-new-chat { background: var(--new-chat-bg); color: var(--new-chat-text); }
+.themed-new-chat:hover { background: var(--new-chat-hover); }
+.themed-online { background: var(--online-bg); border-color: var(--online-border); color: var(--online-text); }
+.themed-offline { background: var(--offline-bg); border-color: var(--offline-border); color: var(--offline-text); }
+.themed-chip { background: var(--chip-bg); border-color: var(--chip-border); color: var(--chip-text); }
+.themed-chip-secondary { color: var(--chip-secondary-text); }
+.themed-chip-icon { background: var(--chip-icon-bg); }
+.themed-modal { background: var(--modal-bg); border-color: var(--modal-border); color: var(--modal-text); }
+.themed-modal-muted { color: var(--modal-muted); }
+.themed-modal-input { background: var(--modal-input-bg); border-color: var(--modal-input-border); color: var(--modal-input-text); }
+.themed-modal-input::placeholder { color: var(--modal-input-placeholder); }
+.themed-hold-btn { background: var(--hold-btn-bg); border-color: var(--hold-btn-border); }
+.themed-aurora-1 { background: var(--aurora-1); }
+.themed-aurora-2 { background: var(--aurora-2); }
+.themed-aurora-3 { background: var(--aurora-3); }
