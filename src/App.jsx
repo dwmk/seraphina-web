@@ -74,6 +74,7 @@ export default function App() {
   const [versionDropdown, setVersionDropdown] = useState(false);
   const [theme, setThemeState] = useState('light');
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isOnline, setIsOnline] = useState(false);
   const [modelOptions, setModelOptions] = useState({
     jsonMode: false,
     toolCalling: false,
@@ -82,6 +83,23 @@ export default function App() {
   const [toolProgress, setToolProgress] = useState(null);
 
   const scrollRef = useRef(null);
+
+  // 5-second pinging
+  useEffect(() => {
+    const checkPing = async () => {
+      try {
+        const res = await fetch('/api/ping');
+        setIsOnline(res.ok);
+      } catch {
+        setIsOnline(false);
+      }
+    };
+    
+    checkPing(); // Initial check on load
+    const pingInterval = setInterval(checkPing, 5000); // Ping every 5 seconds
+    
+    return () => clearInterval(pingInterval);
+  }, []);
 
   useEffect(() => {
     const convs = loadConversations();
@@ -444,11 +462,15 @@ export default function App() {
           )}
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <div className="flex items-center gap-1.5 text-sm">
-              <span className={`font-mono ${counterText}`}>
-                {rateInfo.remaining}/{rateInfo.max || 30}
-              </span>
-              <span className={`${counterLabel} text-xs hidden sm:inline`}>left</span>
+            <div 
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs sm:text-sm font-bold transition-colors ${
+                isOnline 
+                  ? isDark ? 'bg-lime-500/10 border-lime-500/20 text-lime-400' : 'bg-lime-50 border-lime-200 text-lime-600'
+                  : isDark ? 'bg-zinc-800/50 border-zinc-700/50 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-500'
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-lime-500 shadow-[0_0_8px_rgba(132,204,22,0.6)] animate-pulse' : 'bg-zinc-400'}`} />
+              {isOnline ? 'Online' : 'Offline'}
             </div>
             <button
               onClick={toggleTheme}
