@@ -1,11 +1,11 @@
 // src/components/ThemeSidebar.jsx
 import { motion, AnimatePresence } from 'framer-motion';
 import { Palette, X, Check } from '@phosphor-icons/react';
-import { THEMES } from '../lib/themes';
+import { THEMES, getThemeById } from '../lib/themes';
 
 export function ThemeSidebar({ activeTheme, onSelect, open, onClose }) {
   // Matching the exact styling logic from Sidebar.jsx
-  const isDark = activeTheme === 'dark';
+  const isDark = getThemeById(activeTheme).isDark;
   const panelBg = isDark ? 'bg-zinc-950/80 border-white/10' : 'bg-white/90 border-zinc-200';
   const textPrimary = isDark ? 'text-white' : 'text-zinc-900';
   const textSecondary = isDark ? 'text-zinc-400' : 'text-zinc-600';

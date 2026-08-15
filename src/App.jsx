@@ -285,8 +285,8 @@ export default function App() {
       }
     }
 
-    // Display message on frontend stays clean without file dumps
-    const userMsg = { role: 'user', content: displayText };
+    // Display message on frontend
+    const userMsg = { role: 'user', content: displayText, attachments };
     const newMsgs = [...messages, userMsg];
     setMessages(newMsgs);
     persistMessages(convId, newMsgs);
@@ -618,6 +618,29 @@ export default function App() {
                     >
                       {msg.content}
                     </ReactMarkdown>
+                    {/* NEW: Render attachments below the message text */}
+                    {msg.attachments && msg.attachments.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {msg.attachments.map((file, idx) => (
+                          file.type === 'image' ? (
+                            <img 
+                              key={idx} 
+                              src={file.dataUrl} 
+                              alt={file.name} 
+                              className="max-w-full h-auto rounded-xl border border-zinc-500/20 max-h-48 object-cover shadow-sm" 
+                            />
+                          ) : (
+                            <div 
+                              key={idx} 
+                              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-black/5 border border-zinc-500/20 text-xs font-medium"
+                            >
+                              <span className="text-xl">📄</span> 
+                              <span className="truncate max-w-[150px]">{file.name}</span>
+                            </div>
+                          )
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               ))}

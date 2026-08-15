@@ -16,6 +16,7 @@ import {
 } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ACCEPTED_FILE_TYPES, parseFile, formatBytes } from '../lib/fileParser';
+import { getThemeById } from '../lib/themes';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 const MAX_FILES = 5;
@@ -102,7 +103,7 @@ export function ChatInput({
     setAttachments([]);
   };
 
-  const isDark = theme === 'dark';
+  const isDark = getThemeById(theme).isDark;
   const inputBg = isDark ? 'bg-zinc-900/60 border-white/10 focus-within:border-white/30' : 'bg-white border-zinc-200 focus-within:border-zinc-400';
   const inputText = isDark ? 'text-white placeholder-zinc-500' : 'text-zinc-900 placeholder-zinc-400';
   const sendBtn = isDark ? 'bg-white text-zinc-900 hover:bg-zinc-200' : 'bg-zinc-900 text-white hover:bg-black';
