@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { List, Lock, CaretDown, Sun, Moon } from '@phosphor-icons/react';
+import { List, Lock, CaretDown, Sun, Moon, Palette } from '@phosphor-icons/react';
 import { Logo } from './components/Logo';
 import { Sidebar } from './components/Sidebar';
 import { ThemeSidebar } from './components/ThemeSidebar';
