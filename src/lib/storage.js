@@ -88,7 +88,7 @@ export function setWifeEnabled(on) {
 }
 
 export function getTheme() {
-  return localStorage.getItem(THEME_KEY) || 'light';
+  return localStorage.getItem(THEME_KEY) || 'classic-light';
 }
 
 export function setTheme(theme) {

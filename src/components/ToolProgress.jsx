@@ -13,18 +13,12 @@ const TOOL_LABELS = {
   analyze_image: 'Vision Analysis',
 };
 
-export function ToolProgressDisplay({ progress, isDark }) {
-  const textMuted = isDark ? 'text-zinc-400' : 'text-zinc-500';
-  const textPrimary = isDark ? 'text-zinc-100' : 'text-zinc-800';
-  const accentText = isDark ? 'text-blue-400' : 'text-blue-500';
-  const doneText = isDark ? 'text-emerald-400' : 'text-emerald-600';
-  const headerText = isDark ? 'text-zinc-300' : 'text-zinc-600';
-
+export function ToolProgressDisplay({ progress }) {
   if (progress.phase === 'thinking') {
     return (
       <div className="flex items-center gap-2 text-sm">
-        <SpinnerGap size={16} className={`animate-spin ${textMuted}`} />
-        <span className={textMuted}>Thinking…</span>
+        <SpinnerGap size={16} className="animate-spin" style={{ color: 'var(--tool-muted)' }} />
+        <span style={{ color: 'var(--tool-muted)' }}>Thinking…</span>
       </div>
     );
   }
@@ -32,8 +26,8 @@ export function ToolProgressDisplay({ progress, isDark }) {
   if (progress.phase === 'thinking_after_tools') {
     return (
       <div className="flex items-center gap-2 text-sm">
-        <Brain size={16} className={accentText} />
-        <span className={textMuted}>Formulating response…</span>
+        <Brain size={16} style={{ color: 'var(--tool-accent)' }} />
+        <span style={{ color: 'var(--tool-muted)' }}>Formulating response…</span>
       </div>
     );
   }
@@ -41,8 +35,8 @@ export function ToolProgressDisplay({ progress, isDark }) {
   if (progress.phase === 'processing_results') {
     return (
       <div className="flex items-center gap-2 text-sm">
-        <ArrowsClockwise size={16} className={`animate-spin ${accentText}`} />
-        <span className={textMuted}>Processing results…</span>
+        <ArrowsClockwise size={16} className="animate-spin" style={{ color: 'var(--tool-accent)' }} />
+        <span style={{ color: 'var(--tool-muted)' }}>Processing results…</span>
       </div>
     );
   }
@@ -50,7 +44,7 @@ export function ToolProgressDisplay({ progress, isDark }) {
   if (progress.phase === 'calling_tools' && progress.tools) {
     return (
       <div className="flex flex-col gap-1.5 min-w-[180px]">
-        <div className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider mb-0.5 ${headerText}`}>
+        <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider mb-0.5" style={{ color: 'var(--tool-header)' }}>
           <Wrench size={12} />
           <span>Using Tools</span>
         </div>
@@ -65,17 +59,17 @@ export function ToolProgressDisplay({ progress, isDark }) {
               className="flex items-center gap-2 text-sm"
             >
               {tool.status === 'done' ? (
-                <Check size={14} className={doneText} weight="bold" />
+                <Check size={14} weight="bold" style={{ color: 'var(--tool-done)' }} />
               ) : tool.status === 'executing' ? (
-                <SpinnerGap size={14} className={`animate-spin ${accentText}`} />
+                <SpinnerGap size={14} className="animate-spin" style={{ color: 'var(--tool-accent)' }} />
               ) : (
-                <span className={`w-3.5 h-3.5 rounded-full border border-current opacity-30 ${textMuted}`} />
+                <span className="w-3.5 h-3.5 rounded-full border border-current opacity-30" style={{ color: 'var(--tool-muted)' }} />
               )}
-              <span className={tool.status === 'done' ? doneText : tool.status === 'executing' ? accentText : textMuted}>
+              <span style={{ color: tool.status === 'done' ? 'var(--tool-done)' : tool.status === 'executing' ? 'var(--tool-accent)' : 'var(--tool-muted)' }}>
                 {label}
               </span>
               {tool.status === 'executing' && (
-                <span className={`text-xs ${textMuted} italic`}>running…</span>
+                <span className="text-xs italic" style={{ color: 'var(--tool-muted)' }}>running…</span>
               )}
             </motion.div>
           );
@@ -86,9 +80,9 @@ export function ToolProgressDisplay({ progress, isDark }) {
 
   return (
     <div className="flex gap-1.5">
-      <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-      <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-      <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+      <span className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'var(--tool-bounce)', animationDelay: '0ms' }} />
+      <span className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'var(--tool-bounce)', animationDelay: '150ms' }} />
+      <span className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'var(--tool-bounce)', animationDelay: '300ms' }} />
     </div>
   );
 }
