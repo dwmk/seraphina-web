@@ -4,6 +4,7 @@ import { List, Lock, CaretDown, Sun, Moon, Palette } from '@phosphor-icons/react
 import { Logo } from './components/Logo';
 import { Sidebar } from './components/Sidebar';
 import { ThemeSidebar } from './components/ThemeSidebar';
+import { THEMES } from './lib/themes';
 import { ChatInput } from './components/ChatInput';
 import { BlockScreen } from './components/BlockScreen';
 import { DeleteModal } from './components/DeleteModal';
@@ -87,11 +88,18 @@ export default function App() {
   const [modelOptions, setModelOptions] = useState(DEFAULT_OPTIONS);
   const [toolProgress, setToolProgress] = useState(null);
 
-  const resetCapabilitiesToDefault = () => {
-    setModelOptions(DEFAULT_OPTIONS);
-  };
-
   const scrollRef = useRef(null);
+
+  useEffect(() => {
+    // Find the currently active theme object or fallback to the first one
+    const activeThemeData = THEMES.find((t) => t.id === theme) || THEMES[0];
+    
+    // Apply every CSS variable from the theme to the :root element
+    const root = document.documentElement;
+    Object.entries(activeThemeData.vars).forEach(([key, value]) => {
+      root.style.setProperty(key, value);
+    });
+  }, [theme]);
 
   // 5-second pinging
   useEffect(() => {
@@ -170,14 +178,12 @@ export default function App() {
     setActiveId(conv.id);
     setMessages([]);
     setSidebarOpen(false);
-    resetCapabilitiesToDefault();
     setError('');
   };
 
   const handleSelect = (id) => {
     setActiveId(id);
     setSidebarOpen(false);
-    resetCapabilitiesToDefault();
     setError('');
   };
 
