@@ -65,6 +65,7 @@ body {
   border-radius: 2px;
 }
 
+
 /* Theme-aware utility classes (driven by CSS custom properties from themes.js) */
 .themed-bg { background: var(--bg-base); }
 .themed-text { color: var(--text-base); }

@@ -320,7 +320,7 @@ export const THEMES = [
     '--theme-card-text': '#4a2c3a',
     '--theme-card-muted': '#b08896',
   }),
-  t('summer-fruit', 'Summer Fruit', false, {
+  t('summer-splash', 'Summer Splash', false, {
     '--bg-base': '#f0f7ff',
     '--text-base': '#1a3a5c',
     '--header-bg': 'rgba(240,247,255,0.7)',
