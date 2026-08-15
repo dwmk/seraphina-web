@@ -1,5 +1,5 @@
 // src/components/ChatInput.jsx
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { 
   PaperPlaneTilt, 
   Lock, 
@@ -8,7 +8,9 @@ import {
   Plus, 
   BracketsCurly, 
   Wrench, 
-  SlidersHorizontal 
+  SlidersHorizontal,
+  Paperclip,
+  X 
 } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -23,12 +25,30 @@ export function ChatInput({
 }) {
   const [value, setValue] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [attachedImage, setAttachedImage] = useState(null); // { base64, preview }
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAttachedImage({
+        base64: reader.result.split(',')[1], // Strip data URL prefix
+        preview: reader.result,
+      });
+    };
+    reader.readAsDataURL(file);
+  };
 
   const submit = (e) => {
     e.preventDefault();
-    if (!value.trim() || disabled) return;
-    onSend(value.trim());
+    if ((!value.trim() && !attachedImage) || disabled) return;
+    // Pass message and image to parent handler
+    onSend(value.trim(), attachedImage?.base64 || null);
     setValue('');
+    setAttachedImage(null);
   };
 
   const isDark = theme === 'dark';

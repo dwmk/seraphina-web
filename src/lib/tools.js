@@ -85,6 +85,35 @@ export const TOOL_DEFINITIONS = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'generate_image',
+      description: 'Generate or create a new image based on a detailed text prompt. Use this whenever the user asks to draw, create, generate, or render an image or artwork.',
+      parameters: {
+        type: 'object',
+        properties: {
+          prompt: { type: 'string', description: 'Detailed visual description of the image to generate.' },
+        },
+        required: ['prompt'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'analyze_image',
+      description: 'Analyze, describe, or answer questions about an uploaded image attachment using a vision model.',
+      parameters: {
+        type: 'object',
+        properties: {
+          question: { type: 'string', description: 'The question or prompt regarding the uploaded image.' },
+          image_base64: { type: 'string', description: 'The base64 string of the uploaded image.' },
+        },
+        required: ['question', 'image_base64'],
+      },
+    },
+  },
 ];
 
 export function getBrowserInfo() {
@@ -190,6 +219,12 @@ export async function executeTool(name, args = {}, browserInfo = null) {
       case 'wikipedia_search':
         result = await executeWikipediaSearch(args.query);
         break;
+      case 'generate_image':
+        result = await executeGenerateImage(args.prompt);
+        break;
+      case 'analyze_image':
+        result = await executeAnalyzeImage(args.question, args.image_base64);
+        break;
       default:
         result = { error: `Unknown tool: ${name}` };
     }
@@ -197,6 +232,40 @@ export async function executeTool(name, args = {}, browserInfo = null) {
   } catch (err) {
     return JSON.stringify({ error: String(err.message || err) });
   }
+}
+
+// Handler for generating images via a free API or local Stable Diffusion endpoint
+async function executeGenerateImage(prompt) {
+  if (!prompt) return { error: 'Prompt is required' };
+  
+  // Example using Pollinations.ai or your local ComfyUI/AUTOMATIC1111 endpoint
+  const encodedPrompt = encodeURIComponent(prompt);
+  const imageUrl = `https://pollinations.ai/p/${encodedPrompt}?width=1024&height=1024&seed=${Math.floor(Math.random() * 1000000)}`;
+  
+  return {
+    status: 'success',
+    markdown_image: `![${prompt}](${imageUrl})`,
+    message: `Image generated successfully. Embed this exact markdown in your final response: ![${prompt}](${imageUrl})`,
+  };
+}
+
+// Handler for running vision analysis via local Ollama vision model
+async function executeAnalyzeImage(question, imageBase64) {
+  const OLLAMA_VISION_MODEL = 'llama3.2-vision:11b'; // or 'llava:8b'
+  
+  const res = await fetch('/api/vision', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: OLLAMA_VISION_MODEL,
+      prompt: question || 'Describe this image in detail.',
+      images: [imageBase64],
+    }),
+  });
+
+  if (!res.ok) return { error: 'Failed to analyze image with Vision model.' };
+  const data = await res.json();
+  return { analysis: data.reply };
 }
 
 async function executeWeather(location) {
