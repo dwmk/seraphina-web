@@ -8,17 +8,15 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
   const [editingId, setEditingId] = useState(null);
   const [editingTitle, setEditingTitle] = useState('');
 
-  const isDark = getThemeById(theme).isDark;
-
-  const panelBg = isDark ? 'bg-zinc-950/80 border-white/10' : 'bg-white/90 border-zinc-200';
-  const textPrimary = isDark ? 'text-white' : 'text-zinc-900';
-  const textSecondary = isDark ? 'text-zinc-400' : 'text-zinc-600';
-  const textMuted = isDark ? 'text-zinc-500' : 'text-zinc-400';
-  const hoverBg = isDark ? 'hover:bg-white/5' : 'hover:bg-zinc-100';
-  const activeBg = isDark ? 'bg-white/10' : 'bg-zinc-200/70';
-  const borderCol = isDark ? 'border-white/10' : 'border-zinc-200';
-  const newChatBg = isDark ? 'bg-white text-zinc-900 hover:bg-zinc-200' : 'bg-zinc-900 text-white hover:bg-black';
-  const inputBg = isDark ? 'bg-zinc-800 text-white border-white/20' : 'bg-white text-zinc-900 border-zinc-300';
+  const panelBg = theme === 'dark' ? 'bg-zinc-950/80 border-white/10' : 'bg-white/90 border-zinc-200';
+  const textPrimary = theme === 'dark' ? 'text-white' : 'text-zinc-900';
+  const textSecondary = theme === 'dark' ? 'text-zinc-400' : 'text-zinc-600';
+  const textMuted = theme === 'dark' ? 'text-zinc-500' : 'text-zinc-400';
+  const hoverBg = theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-zinc-100';
+  const activeBg = theme === 'dark' ? 'bg-white/10' : 'bg-zinc-200/70';
+  const borderCol = theme === 'dark' ? 'border-white/10' : 'border-zinc-200';
+  const newChatBg = theme === 'dark' ? 'bg-white text-zinc-900 hover:bg-zinc-200' : 'bg-zinc-900 text-white hover:bg-black';
+  const inputBg = theme === 'dark' ? 'bg-zinc-800 text-white border-white/20' : 'bg-white text-zinc-900 border-zinc-300';
 
   const startRename = (e, c) => {
     e.stopPropagation();

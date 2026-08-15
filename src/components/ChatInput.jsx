@@ -12,6 +12,7 @@ import {
   Paperclip,
   X,
   FileText,
+  Image as ImageIcon,
   SpinnerGap
 } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -32,7 +33,7 @@ export function ChatInput({
 }) {
   const [value, setValue] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
-  const [attachments, setAttachments] = useState([]);
+  const [attachments, setAttachments] = useState([]); // [{ file, parsed, preview, parsing, error }]
   const [parsing, setParsing] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -43,6 +44,10 @@ export function ChatInput({
     if (files.length === 0) return;
 
     const validFiles = files.filter((f) => f.size <= MAX_FILE_SIZE);
+    if (validFiles.length < files.length) {
+      // Silently drop oversized files — could add a toast later
+    }
+
     const room = MAX_FILES - attachments.length;
     const toAdd = validFiles.slice(0, room);
     if (toAdd.length === 0) return;
@@ -54,6 +59,7 @@ export function ChatInput({
 
     setParsing(true);
 
+    // Add placeholders immediately
     const placeholders = toAdd.map((file) => ({
       id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       file,
@@ -64,6 +70,7 @@ export function ChatInput({
     }));
     setAttachments((prev) => [...prev, ...placeholders]);
 
+    // Parse each file
     for (const p of placeholders) {
       try {
         const parsed = await parseFile(p.file);
@@ -78,8 +85,8 @@ export function ChatInput({
     }
 
     setParsing(false);
+    // Reset input so the same file can be re-selected
     if (fileInputRef.current) fileInputRef.current.value = '';
-    setMenuOpen(false); // Close menu after selection
   };
 
   const removeAttachment = (id) => {
@@ -99,11 +106,12 @@ export function ChatInput({
     const readyAttachments = attachments.filter((a) => a.parsed && !a.error);
     onSend(value.trim(), readyAttachments.map((a) => a.parsed));
     setValue('');
+    // Revoke object URLs
     attachments.forEach((a) => { if (a.preview) URL.revokeObjectURL(a.preview); });
     setAttachments([]);
   };
 
-  const isDark = getThemeById(theme).isDark;
+  const isDark = theme === 'dark';
   const inputBg = isDark ? 'bg-zinc-900/60 border-white/10 focus-within:border-white/30' : 'bg-white border-zinc-200 focus-within:border-zinc-400';
   const inputText = isDark ? 'text-white placeholder-zinc-500' : 'text-zinc-900 placeholder-zinc-400';
   const sendBtn = isDark ? 'bg-white text-zinc-900 hover:bg-zinc-200' : 'bg-zinc-900 text-white hover:bg-black';
@@ -114,6 +122,9 @@ export function ChatInput({
   const plusBtnClass = isDark 
     ? 'text-zinc-400 hover:text-white hover:bg-white/10' 
     : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100';
+  const attachBtnClass = isDark
+    ? 'text-zinc-400 hover:text-white hover:bg-white/10'
+    : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100';
   const chipBg = isDark ? 'bg-white/5 border-white/10' : 'bg-zinc-100 border-zinc-200';
   const chipText = isDark ? 'text-zinc-300' : 'text-zinc-700';
   const chipError = isDark ? 'text-red-400' : 'text-red-500';
@@ -121,7 +132,7 @@ export function ChatInput({
   return (
     <div className="w-full px-4 pb-4 pt-2 relative z-10">
       <form onSubmit={submit} className="relative max-w-3xl mx-auto">
-        
+
         {/* Hidden File Input */}
         <input
           ref={fileInputRef}
@@ -131,7 +142,7 @@ export function ChatInput({
           onChange={handleFileChange}
           className="hidden"
         />
-
+        
         {/* Attachment Previews */}
         <AnimatePresence>
           {attachments.length > 0 && (
@@ -198,7 +209,7 @@ export function ChatInput({
                   Extra Capabilities
                 </div>
 
-                {/* 1. File Attachment Option (Located ABOVE JSON Output Mode) */}
+                {/* File Attachment Option (Located ABOVE JSON Output Mode) */}
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
@@ -216,7 +227,7 @@ export function ChatInput({
                   </span>
                 </button>
 
-                {/* 2. Structured JSON Mode Toggle */}
+                {/* Structured JSON Mode Toggle */}
                 <button
                   type="button"
                   onClick={() => onOptionsChange?.({ ...options, jsonMode: !options.jsonMode })}
@@ -235,7 +246,7 @@ export function ChatInput({
                   </span>
                 </button>
 
-                {/* 3. Tool / Function Calling Toggle */}
+                {/* Tool / Function Calling Toggle */}
                 <button
                   type="button"
                   onClick={() => onOptionsChange?.({ ...options, toolCalling: !options.toolCalling })}
@@ -254,7 +265,7 @@ export function ChatInput({
                   </span>
                 </button>
 
-                {/* 4. Temperature/Creativity Slider */}
+                {/* Temperature/Creativity Slider */}
                 <div className="p-2.5 rounded-xl border border-white/5 mt-2">
                   <div className="flex justify-between items-center text-xs mb-1.5">
                     <span className="flex items-center gap-1.5 text-zinc-400">
