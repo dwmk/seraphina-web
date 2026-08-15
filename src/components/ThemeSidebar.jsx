@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { PaintPalette, X, Check } from '@phosphor-icons/react';
+import { Palette, X, Check } from '@phosphor-icons/react';
 import { THEMES } from '../lib/themes';
 
 export function ThemeSidebar({ activeTheme, onSelect, open, onClose }) {
@@ -27,7 +27,7 @@ export function ThemeSidebar({ activeTheme, onSelect, open, onClose }) {
         }}
       >
         <div className="p-4 flex items-center gap-3 border-b" style={{ borderColor: 'var(--theme-sidebar-border)' }}>
-          <PaintPalette size={20} style={{ color: 'var(--accent)' }} />
+          <Palette size={20} style={{ color: 'var(--accent)' }} />
           <span className="font-bold text-lg" style={{ color: 'var(--theme-sidebar-text, var(--sidebar-text))' }}>Themes</span>
           <button
             onClick={onClose}

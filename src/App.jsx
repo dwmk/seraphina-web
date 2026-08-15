@@ -523,7 +523,7 @@ export default function App() {
               className={`p-2 rounded-lg transition-colors ${themeBtn}`}
               title="Themes"
             >
-              <PaintPalette size={20} />
+              <Palette size={20} />
             </button>
           </div>
         </header>
