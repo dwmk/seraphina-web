@@ -49,3 +49,17 @@ export async function generateTitle(messages, version = 'v1.6') {
   const data = await res.json().catch(() => ({}));
   return data.title || null;
 }
+
+export async function analyzeImageWithVision(prompt, images, model) {
+  const res = await fetch('/api/vision', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, images, model }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || err.error || `Vision request failed (${res.status})`);
+  }
+  const data = await res.json();
+  return data.reply || '';
+}

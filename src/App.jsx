@@ -11,8 +11,9 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
-import { fetchAIReply, verifyWifePassword, generateTitle } from './lib/api';
+import { fetchAIReply, verifyWifePassword, generateTitle, analyzeImageWithVision } from './lib/api';
 import { TOOL_DEFINITIONS, executeTool, getBrowserInfo } from './lib/tools';
+import { formatFileForContext } from './lib/fileParser';
 import {
   loadConversations, createConversation, deleteConversation, updateConversation,
   getRateInfo, recordMessage, isWifeEnabled, setWifeEnabled, getTheme, setTheme,
@@ -216,7 +217,7 @@ export default function App() {
     }
   };
 
-  const handleSend = async (text) => {
+  const handleSend = async (text, attachments = []) => {
     let convId = activeId;
     let currentConvs = conversations;
     
@@ -237,7 +238,45 @@ export default function App() {
       setConversations(currentConvs);
     }
 
-    const userMsg = { role: 'user', content: text };
+    // Build user message content with attachments
+    let userContent = text;
+    const imageAttachments = attachments.filter((a) => a.type === 'image');
+    const docAttachments = attachments.filter((a) => a.type !== 'image');
+
+    if (docAttachments.length > 0) {
+      const docParts = docAttachments.map((a) => formatFileForContext(a));
+      userContent = `${userContent}
+
+--- ATTACHED FILES ---
+${docParts.join('\n\n')}`.trim();
+    }
+
+    // For images, auto-analyze them via the vision model and include the analysis
+    let visionAnalysis = '';
+    if (imageAttachments.length > 0) {
+      setLoading(true);
+      setToolProgress({ phase: 'calling_tools', tools: imageAttachments.map((_, i) => ({ name: 'analyze_image', status: i === 0 ? 'executing' : 'pending' })) });
+      try {
+        const visionPrompt = text || 'Describe this image in detail. What do you see?';
+        const imageBase64s = imageAttachments.map((a) => a.base64);
+        visionAnalysis = await analyzeImageWithVision(visionPrompt, imageBase64s);
+        setToolProgress({ phase: 'calling_tools', tools: imageAttachments.map(() => ({ name: 'analyze_image', status: 'done' })) });
+      } catch (err) {
+        visionAnalysis = `[Vision analysis failed: ${err.message || 'Unknown error'}]`;
+        setToolProgress({ phase: 'calling_tools', tools: imageAttachments.map(() => ({ name: 'analyze_image', status: 'done' })) });
+      }
+
+      if (visionAnalysis) {
+        const imageNames = imageAttachments.map((a) => a.name).join(', ');
+        userContent = `${userContent}
+
+--- IMAGE ANALYSIS (${imageNames}) ---
+The vision model analyzed the attached image(s) and produced this description:
+${visionAnalysis}`.trim();
+      }
+    }
+
+    const userMsg = { role: 'user', content: userContent };
     const newMsgs = [...messages, userMsg];
     setMessages(newMsgs);
     persistMessages(convId, newMsgs);

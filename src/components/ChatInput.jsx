@@ -10,9 +10,16 @@ import {
   Wrench, 
   SlidersHorizontal,
   Paperclip,
-  X 
+  X,
+  FileText,
+  Image as ImageIcon,
+  SpinnerGap
 } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ACCEPTED_FILE_TYPES, parseFile, formatBytes } from '../lib/fileParser';
+
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
+const MAX_FILES = 5;
 
 export function ChatInput({ 
   onSend, 
@@ -25,30 +32,77 @@ export function ChatInput({
 }) {
   const [value, setValue] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
-  const [attachedImage, setAttachedImage] = useState(null); // { base64, preview }
+  const [attachments, setAttachments] = useState([]); // [{ file, parsed, preview, parsing, error }]
+  const [parsing, setParsing] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const isImage = (file) => file.type.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(file.name);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setAttachedImage({
-        base64: reader.result.split(',')[1], // Strip data URL prefix
-        preview: reader.result,
-      });
-    };
-    reader.readAsDataURL(file);
+  const handleFileChange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const validFiles = files.filter((f) => f.size <= MAX_FILE_SIZE);
+    if (validFiles.length < files.length) {
+      // Silently drop oversized files — could add a toast later
+    }
+
+    const room = MAX_FILES - attachments.length;
+    const toAdd = validFiles.slice(0, room);
+    if (toAdd.length === 0) return;
+
+    setParsing(true);
+
+    // Add placeholders immediately
+    const placeholders = toAdd.map((file) => ({
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      file,
+      preview: isImage(file) ? URL.createObjectURL(file) : null,
+      parsed: null,
+      parsing: true,
+      error: null,
+    }));
+    setAttachments((prev) => [...prev, ...placeholders]);
+
+    // Parse each file
+    for (const p of placeholders) {
+      try {
+        const parsed = await parseFile(p.file);
+        setAttachments((prev) =>
+          prev.map((a) => (a.id === p.id ? { ...a, parsed, parsing: false } : a))
+        );
+      } catch (err) {
+        setAttachments((prev) =>
+          prev.map((a) => (a.id === p.id ? { ...a, parsing: false, error: String(err.message || err) } : a))
+        );
+      }
+    }
+
+    setParsing(false);
+    // Reset input so the same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeAttachment = (id) => {
+    setAttachments((prev) => {
+      const item = prev.find((a) => a.id === id);
+      if (item?.preview) URL.revokeObjectURL(item.preview);
+      return prev.filter((a) => a.id !== id);
+    });
   };
 
   const submit = (e) => {
     e.preventDefault();
-    if ((!value.trim() && !attachedImage) || disabled) return;
-    // Pass message and image to parent handler
-    onSend(value.trim(), attachedImage?.base64 || null);
+    const hasText = value.trim().length > 0;
+    const hasReadyAttachments = attachments.some((a) => a.parsed && !a.error);
+    if ((!hasText && !hasReadyAttachments) || disabled || parsing) return;
+
+    const readyAttachments = attachments.filter((a) => a.parsed && !a.error);
+    onSend(value.trim(), readyAttachments.map((a) => a.parsed));
     setValue('');
-    setAttachedImage(null);
+    // Revoke object URLs
+    attachments.forEach((a) => { if (a.preview) URL.revokeObjectURL(a.preview); });
+    setAttachments([]);
   };
 
   const isDark = theme === 'dark';
@@ -62,11 +116,68 @@ export function ChatInput({
   const plusBtnClass = isDark 
     ? 'text-zinc-400 hover:text-white hover:bg-white/10' 
     : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100';
+  const attachBtnClass = isDark
+    ? 'text-zinc-400 hover:text-white hover:bg-white/10'
+    : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100';
+  const chipBg = isDark ? 'bg-white/5 border-white/10' : 'bg-zinc-100 border-zinc-200';
+  const chipText = isDark ? 'text-zinc-300' : 'text-zinc-700';
+  const chipError = isDark ? 'text-red-400' : 'text-red-500';
 
   return (
     <div className="w-full px-4 pb-4 pt-2 relative z-10">
       <form onSubmit={submit} className="relative max-w-3xl mx-auto">
         
+        {/* Attachment Previews */}
+        <AnimatePresence>
+          {attachments.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="flex flex-wrap gap-2 mb-2 overflow-hidden"
+            >
+              {attachments.map((att) => (
+                <motion.div
+                  key={att.id}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className={`relative flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-xl border ${chipBg}`}
+                >
+                  {att.preview ? (
+                    <img src={att.preview} alt={att.file.name} className="w-8 h-8 rounded-lg object-cover shrink-0" />
+                  ) : (
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isDark ? 'bg-white/10' : 'bg-zinc-200'}`}>
+                      <FileText size={16} className={chipText} />
+                    </div>
+                  )}
+                  <div className="flex flex-col min-w-0 max-w-[140px]">
+                    <span className={`text-xs font-medium truncate ${chipText}`}>{att.file.name}</span>
+                    <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                      {att.parsing ? (
+                        <span className="flex items-center gap-1">
+                          <SpinnerGap size={10} className="animate-spin" /> Parsing...
+                        </span>
+                      ) : att.error ? (
+                        <span className={chipError}>Failed</span>
+                      ) : (
+                        formatBytes(att.file.size)
+                      )}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(att.id)}
+                    className={`p-0.5 rounded-full transition-colors ${isDark ? 'hover:bg-white/10 text-zinc-400 hover:text-white' : 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-900'}`}
+                  >
+                    <X size={14} weight="bold" />
+                  </button>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Features Menu Dropdown (+ Button Popover) */}
         <AnimatePresence>
           {menuOpen && (
@@ -149,12 +260,30 @@ export function ChatInput({
           <button
             type="button"
             onClick={() => setMenuOpen((v) => !v)}
-            // ADDED: mb-0.5 sm:mb-1 to nudge the icon upward
             className={`p-2 mb-0.5 sm:mb-1 rounded-full transition-transform active:scale-95 ${plusBtnClass} ${menuOpen ? 'rotate-45' : ''}`}
             title="Model Capabilities & Tools"
           >
             <Plus size={20} weight="bold" />
           </button>
+
+          {/* Paperclip button for file attachments */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled || attachments.length >= MAX_FILES}
+            className={`p-2 mb-0.5 sm:mb-1 rounded-full transition-colors active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed ${attachBtnClass}`}
+            title="Attach files (images, PDF, DOCX, XLSX, TXT, JSON, CSV, and more)"
+          >
+            <Paperclip size={20} />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPTED_FILE_TYPES}
+            multiple
+            onChange={handleFileChange}
+            className="hidden"
+          />
 
           <textarea
             value={value}
@@ -171,10 +300,10 @@ export function ChatInput({
 
           <button
             type="submit"
-            disabled={disabled || !value.trim()}
+            disabled={disabled || (!value.trim() && attachments.filter((a) => a.parsed && !a.error).length === 0) || parsing}
             className={`w-10 h-10 sm:w-11 sm:h-11 shrink-0 rounded-full flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-colors ${sendBtn}`}
           >
-            <PaperPlaneTilt size={18} weight="fill" />
+            {parsing ? <SpinnerGap size={18} className="animate-spin" /> : <PaperPlaneTilt size={18} weight="fill" />}
           </button>
         </div>
 
@@ -208,6 +337,11 @@ export function ChatInput({
             {options.toolCalling && (
               <span className="text-[10px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full">
                 Tools Active
+              </span>
+            )}
+            {attachments.length > 0 && (
+              <span className="text-[10px] font-mono bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-full">
+                {attachments.length} File{attachments.length > 1 ? 's' : ''}
               </span>
             )}
           </div>

@@ -9,6 +9,8 @@ const TOOL_LABELS = {
   get_crypto_price: 'Crypto Price',
   web_search: 'Web Search',
   wikipedia_search: 'Wikipedia',
+  generate_image: 'Image Generation',
+  analyze_image: 'Vision Analysis',
 };
 
 export function ToolProgressDisplay({ progress, isDark }) {
