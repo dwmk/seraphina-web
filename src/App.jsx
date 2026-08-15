@@ -79,13 +79,11 @@ export default function App() {
   const [theme, setThemeState] = useState('light');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isOnline, setIsOnline] = useState(false);
-  // Default capability state (OFF by default)
-  const DEFAULT_OPTIONS = {
+  const [modelOptions, setModelOptions] = useState({
     jsonMode: false,
     toolCalling: false,
     temperature: 0.6,
-  };
-  const [modelOptions, setModelOptions] = useState(DEFAULT_OPTIONS);
+  });
   const [toolProgress, setToolProgress] = useState(null);
 
   const scrollRef = useRef(null);
@@ -233,7 +231,7 @@ export default function App() {
     }
   };
 
- const handleSend = async (text, attachments = []) => {
+  const handleSend = async (text, attachments = []) => {
     let convId = activeId;
     let currentConvs = conversations;
     
@@ -245,6 +243,7 @@ export default function App() {
       setActiveId(convId);
     }
 
+    // Number conversations as "Chat #X" on the first message sent
     const activeConv = currentConvs.find(c => c.id === convId);
     if (activeConv && activeConv.title === 'New chat' && messages.length === 0) {
       const newTitle = `Chat #${currentConvs.length}`;
@@ -253,10 +252,10 @@ export default function App() {
       setConversations(currentConvs);
     }
 
+    // Build user message content with attachments
     // Prepare message contents for display vs LLM context payload
     const displayText = text || (attachments.length > 0 ? `[Attached ${attachments.length} file(s)]` : '');
     let fullContextContent = text;
-    
     const imageAttachments = attachments.filter((a) => a.type === 'image');
     const docAttachments = attachments.filter((a) => a.type !== 'image');
 
@@ -265,6 +264,7 @@ export default function App() {
       fullContextContent = `${fullContextContent}\n\n--- ATTACHED FILES ---\n${docParts.join('\n\n')}`.trim();
     }
 
+    // For images, auto-analyze them via the vision model and include the analysis
     let visionAnalysis = '';
     if (imageAttachments.length > 0) {
       setLoading(true);
@@ -285,7 +285,6 @@ export default function App() {
       }
     }
 
-    // Display message on frontend
     const userMsg = { role: 'user', content: displayText, attachments };
     const newMsgs = [...messages, userMsg];
     setMessages(newMsgs);
@@ -298,8 +297,6 @@ export default function App() {
     const tools = modelOptions.toolCalling ? TOOL_DEFINITIONS : null;
     const browserInfo = getBrowserInfo();
     const MAX_TOOL_ROUNDS = 5;
-
-    // Send fullContextContent to LLM history while keeping UI clean
     let conversationHistory = [...messages, { role: 'user', content: fullContextContent }];
     let gotFinalReply = false;
 
@@ -523,18 +520,16 @@ export default function App() {
               <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-lime-500 shadow-[0_0_8px_rgba(132,204,22,0.6)] animate-pulse' : 'bg-zinc-400'}`} />
               {isOnline ? 'Online' : 'Offline'}
             </div>
-            {/* Theme Color Palette Icon Button */}
             <button
-              onClick={() => setThemeSidebarOpen((v) => !v)}
+              onClick={toggleTheme}
               className={`p-2 rounded-lg transition-colors ${themeBtn}`}
-              title="Themes"
             >
-              <Palette size={20} />
+              {isDark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
           </div>
         </header>
 
-        {/* Right Theme Sidebar */}
+        {/* Right Theme Sidebar, currently not toggle-able */}
         <ThemeSidebar
           activeTheme={theme}
           onSelect={(newTheme) => {
