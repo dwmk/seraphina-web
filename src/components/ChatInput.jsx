@@ -12,7 +12,6 @@ import {
   Paperclip,
   X,
   FileText,
-  Image as ImageIcon,
   SpinnerGap
 } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -32,7 +31,7 @@ export function ChatInput({
 }) {
   const [value, setValue] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
-  const [attachments, setAttachments] = useState([]); // [{ file, parsed, preview, parsing, error }]
+  const [attachments, setAttachments] = useState([]);
   const [parsing, setParsing] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -43,17 +42,17 @@ export function ChatInput({
     if (files.length === 0) return;
 
     const validFiles = files.filter((f) => f.size <= MAX_FILE_SIZE);
-    if (validFiles.length < files.length) {
-      // Silently drop oversized files — could add a toast later
-    }
-
     const room = MAX_FILES - attachments.length;
     const toAdd = validFiles.slice(0, room);
     if (toAdd.length === 0) return;
 
+    // Automatically enable tool calling mode when files are attached
+    if (onOptionsChange && !options.toolCalling) {
+      onOptionsChange({ ...options, toolCalling: true });
+    }
+
     setParsing(true);
 
-    // Add placeholders immediately
     const placeholders = toAdd.map((file) => ({
       id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       file,
@@ -64,7 +63,6 @@ export function ChatInput({
     }));
     setAttachments((prev) => [...prev, ...placeholders]);
 
-    // Parse each file
     for (const p of placeholders) {
       try {
         const parsed = await parseFile(p.file);
@@ -79,8 +77,8 @@ export function ChatInput({
     }
 
     setParsing(false);
-    // Reset input so the same file can be re-selected
     if (fileInputRef.current) fileInputRef.current.value = '';
+    setMenuOpen(false); // Close menu after selection
   };
 
   const removeAttachment = (id) => {
@@ -100,7 +98,6 @@ export function ChatInput({
     const readyAttachments = attachments.filter((a) => a.parsed && !a.error);
     onSend(value.trim(), readyAttachments.map((a) => a.parsed));
     setValue('');
-    // Revoke object URLs
     attachments.forEach((a) => { if (a.preview) URL.revokeObjectURL(a.preview); });
     setAttachments([]);
   };
@@ -116,9 +113,6 @@ export function ChatInput({
   const plusBtnClass = isDark 
     ? 'text-zinc-400 hover:text-white hover:bg-white/10' 
     : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100';
-  const attachBtnClass = isDark
-    ? 'text-zinc-400 hover:text-white hover:bg-white/10'
-    : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100';
   const chipBg = isDark ? 'bg-white/5 border-white/10' : 'bg-zinc-100 border-zinc-200';
   const chipText = isDark ? 'text-zinc-300' : 'text-zinc-700';
   const chipError = isDark ? 'text-red-400' : 'text-red-500';
@@ -127,6 +121,16 @@ export function ChatInput({
     <div className="w-full px-4 pb-4 pt-2 relative z-10">
       <form onSubmit={submit} className="relative max-w-3xl mx-auto">
         
+        {/* Hidden File Input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ACCEPTED_FILE_TYPES}
+          multiple
+          onChange={handleFileChange}
+          className="hidden"
+        />
+
         {/* Attachment Previews */}
         <AnimatePresence>
           {attachments.length > 0 && (
@@ -193,7 +197,25 @@ export function ChatInput({
                   Extra Capabilities
                 </div>
 
-                {/* 1. Structured JSON Mode Toggle */}
+                {/* 1. File Attachment Option (Located ABOVE JSON Output Mode) */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={disabled || attachments.length >= MAX_FILES}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors mb-1 ${
+                    isDark ? 'hover:bg-white/5' : 'hover:bg-zinc-100'
+                  } disabled:opacity-40 disabled:cursor-not-allowed`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Paperclip size={18} />
+                    <span>Attach Files</span>
+                  </div>
+                  <span className="font-mono text-[10px] text-zinc-400">
+                    {attachments.length}/{MAX_FILES}
+                  </span>
+                </button>
+
+                {/* 2. Structured JSON Mode Toggle */}
                 <button
                   type="button"
                   onClick={() => onOptionsChange?.({ ...options, jsonMode: !options.jsonMode })}
@@ -212,7 +234,7 @@ export function ChatInput({
                   </span>
                 </button>
 
-                {/* 2. Tool / Function Calling Toggle */}
+                {/* 3. Tool / Function Calling Toggle */}
                 <button
                   type="button"
                   onClick={() => onOptionsChange?.({ ...options, toolCalling: !options.toolCalling })}
@@ -231,7 +253,7 @@ export function ChatInput({
                   </span>
                 </button>
 
-                {/* 3. Temperature Slider */}
+                {/* 4. Temperature/Creativity Slider */}
                 <div className="p-2.5 rounded-xl border border-white/5 mt-2">
                   <div className="flex justify-between items-center text-xs mb-1.5">
                     <span className="flex items-center gap-1.5 text-zinc-400">
@@ -265,25 +287,6 @@ export function ChatInput({
           >
             <Plus size={20} weight="bold" />
           </button>
-
-          {/* Paperclip button for file attachments */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={disabled || attachments.length >= MAX_FILES}
-            className={`p-2 mb-0.5 sm:mb-1 rounded-full transition-colors active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed ${attachBtnClass}`}
-            title="Attach files (images, PDF, DOCX, XLSX, TXT, JSON, CSV, and more)"
-          >
-            <Paperclip size={20} />
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={ACCEPTED_FILE_TYPES}
-            multiple
-            onChange={handleFileChange}
-            className="hidden"
-          />
 
           <textarea
             value={value}

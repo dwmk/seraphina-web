@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { List, Lock, CaretDown, Sun, Moon } from '@phosphor-icons/react';
 import { Logo } from './components/Logo';
 import { Sidebar } from './components/Sidebar';
+import { ThemeSidebar } from './components/ThemeSidebar';
 import { ChatInput } from './components/ChatInput';
 import { BlockScreen } from './components/BlockScreen';
 import { DeleteModal } from './components/DeleteModal';
@@ -67,6 +68,7 @@ export default function App() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [themeSidebarOpen, setThemeSidebarOpen] = useState(false);
   const [rateInfo, setRateInfo] = useState({ blocked: false, resetIn: 0, remaining: 30, max: 30 });
   const [wifeMode, setWifeMode] = useState(false);
   const [wifeModal, setWifeModal] = useState(null);
@@ -76,12 +78,18 @@ export default function App() {
   const [theme, setThemeState] = useState('light');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isOnline, setIsOnline] = useState(false);
-  const [modelOptions, setModelOptions] = useState({
+  // Default capability state (OFF by default)
+  const DEFAULT_OPTIONS = {
     jsonMode: false,
     toolCalling: false,
     temperature: 0.6,
-  });
+  };
+  const [modelOptions, setModelOptions] = useState(DEFAULT_OPTIONS);
   const [toolProgress, setToolProgress] = useState(null);
+
+  const resetCapabilitiesToDefault = () => {
+    setModelOptions(DEFAULT_OPTIONS);
+  };
 
   const scrollRef = useRef(null);
 
@@ -162,12 +170,14 @@ export default function App() {
     setActiveId(conv.id);
     setMessages([]);
     setSidebarOpen(false);
+    resetCapabilitiesToDefault();
     setError('');
   };
 
   const handleSelect = (id) => {
     setActiveId(id);
     setSidebarOpen(false);
+    resetCapabilitiesToDefault();
     setError('');
   };
 
@@ -217,7 +227,7 @@ export default function App() {
     }
   };
 
-  const handleSend = async (text, attachments = []) => {
+ const handleSend = async (text, attachments = []) => {
     let convId = activeId;
     let currentConvs = conversations;
     
@@ -229,7 +239,6 @@ export default function App() {
       setActiveId(convId);
     }
 
-    // Number conversations as "Chat #X" on the first message sent
     const activeConv = currentConvs.find(c => c.id === convId);
     if (activeConv && activeConv.title === 'New chat' && messages.length === 0) {
       const newTitle = `Chat #${currentConvs.length}`;
@@ -238,20 +247,18 @@ export default function App() {
       setConversations(currentConvs);
     }
 
-    // Build user message content with attachments
-    let userContent = text;
+    // Prepare message contents for display vs LLM context payload
+    const displayText = text || (attachments.length > 0 ? `[Attached ${attachments.length} file(s)]` : '');
+    let fullContextContent = text;
+    
     const imageAttachments = attachments.filter((a) => a.type === 'image');
     const docAttachments = attachments.filter((a) => a.type !== 'image');
 
     if (docAttachments.length > 0) {
       const docParts = docAttachments.map((a) => formatFileForContext(a));
-      userContent = `${userContent}
-
---- ATTACHED FILES ---
-${docParts.join('\n\n')}`.trim();
+      fullContextContent = `${fullContextContent}\n\n--- ATTACHED FILES ---\n${docParts.join('\n\n')}`.trim();
     }
 
-    // For images, auto-analyze them via the vision model and include the analysis
     let visionAnalysis = '';
     if (imageAttachments.length > 0) {
       setLoading(true);
@@ -268,15 +275,12 @@ ${docParts.join('\n\n')}`.trim();
 
       if (visionAnalysis) {
         const imageNames = imageAttachments.map((a) => a.name).join(', ');
-        userContent = `${userContent}
-
---- IMAGE ANALYSIS (${imageNames}) ---
-The vision model analyzed the attached image(s) and produced this description:
-${visionAnalysis}`.trim();
+        fullContextContent = `${fullContextContent}\n\n--- IMAGE ANALYSIS (${imageNames}) ---\nThe vision model analyzed the attached image(s) and produced this description:\n${visionAnalysis}`.trim();
       }
     }
 
-    const userMsg = { role: 'user', content: userContent };
+    // Display message on frontend stays clean without file dumps
+    const userMsg = { role: 'user', content: displayText };
     const newMsgs = [...messages, userMsg];
     setMessages(newMsgs);
     persistMessages(convId, newMsgs);
@@ -288,7 +292,9 @@ ${visionAnalysis}`.trim();
     const tools = modelOptions.toolCalling ? TOOL_DEFINITIONS : null;
     const browserInfo = getBrowserInfo();
     const MAX_TOOL_ROUNDS = 5;
-    let conversationHistory = [...newMsgs];
+
+    // Send fullContextContent to LLM history while keeping UI clean
+    let conversationHistory = [...messages, { role: 'user', content: fullContextContent }];
     let gotFinalReply = false;
 
     try {
@@ -511,14 +517,27 @@ ${visionAnalysis}`.trim();
               <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-lime-500 shadow-[0_0_8px_rgba(132,204,22,0.6)] animate-pulse' : 'bg-zinc-400'}`} />
               {isOnline ? 'Online' : 'Offline'}
             </div>
+            {/* Theme Color Palette Icon Button */}
             <button
-              onClick={toggleTheme}
+              onClick={() => setThemeSidebarOpen((v) => !v)}
               className={`p-2 rounded-lg transition-colors ${themeBtn}`}
+              title="Themes"
             >
-              {isDark ? <Sun size={18} /> : <Moon size={18} />}
+              <PaintPalette size={20} />
             </button>
           </div>
         </header>
+
+        {/* Right Theme Sidebar */}
+        <ThemeSidebar
+          activeTheme={theme}
+          onSelect={(newTheme) => {
+            setThemeState(newTheme);
+            setTheme(newTheme);
+          }}
+          open={themeSidebarOpen}
+          onClose={() => setThemeSidebarOpen(false)}
+        />
 
         <main className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 sm:py-6">
           <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
