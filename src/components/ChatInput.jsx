@@ -235,7 +235,7 @@ export function ChatInput({
                 <div className="p-2.5 rounded-xl border border-white/5 mt-2">
                   <div className="flex justify-between items-center text-xs mb-1.5">
                     <span className="flex items-center gap-1.5 text-zinc-400">
-                      <SlidersHorizontal size={16} /> Temperature
+                      <SlidersHorizontal size={16} /> Creativity
                     </span>
                     <span className="font-mono text-xs font-bold">{options.temperature ?? 0.6}</span>
                   </div>
