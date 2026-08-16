@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { List, Lock, CaretDown, Sun, Moon, Palette } from '@phosphor-icons/react';
+import { List, Lock, CaretDown, Palette } from '@phosphor-icons/react';
 import { Logo } from './components/Logo';
 import { Sidebar } from './components/Sidebar';
 import { ThemeSidebar } from './components/ThemeSidebar';
@@ -20,44 +20,36 @@ import {
   loadConversations, createConversation, deleteConversation, updateConversation,
   getRateInfo, recordMessage, isWifeEnabled, setWifeEnabled, getTheme, setTheme,
 } from './lib/storage';
-import { ToolProgressDisplay } from './components/ToolProgress';
 
 const VERSIONS = ['v1.6', 'v1.4'];
 const GENERIC_ERROR = "Action could not be completed. Seraphina couldn't receive your message or she couldn't react to it.";
 
-function TalkingAvatar({ logoBox, size = 56 }) {
+function TalkingAvatar({ size = 56 }) {
   const [variant, setVariant] = useState(1);
 
   useEffect(() => {
     let timeoutId;
     const startTime = Date.now();
-    const DURATION = 3000; // 3 seconds total
+    const DURATION = 3000;
 
     const cycle = () => {
       const elapsed = Date.now() - startTime;
-
       if (elapsed >= DURATION) {
-        setVariant(1); // Ensure it strictly ends on variant 1
+        setVariant(1);
         return;
       }
-
-      // Toggle between variant 1 and 2
       setVariant((prev) => (prev === 1 ? 2 : 1));
-
-      // Rhythmic & slightly unpredictable delay interval (130ms to 260ms)
       const nextDelay = Math.floor(Math.random() * (260 - 130 + 1)) + 130;
       timeoutId = setTimeout(cycle, nextDelay);
     };
 
-    // Kick off initial switch from 1 -> 2
     const initialDelay = Math.floor(Math.random() * (260 - 130 + 1)) + 130;
     timeoutId = setTimeout(cycle, initialDelay);
-
     return () => clearTimeout(timeoutId);
   }, []);
 
   return (
-    <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl ${logoBox} border flex items-center justify-center shrink-0 mt-1 overflow-hidden`}>
+    <div className="themed-logo-box w-12 h-12 sm:w-14 sm:h-14 rounded-xl border flex items-center justify-center shrink-0 mt-1 overflow-hidden">
       <Logo size={size} variant={variant} overflow />
     </div>
   );
@@ -76,7 +68,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [version, setVersion] = useState('v1.6');
   const [versionDropdown, setVersionDropdown] = useState(false);
-  const [theme, setThemeState] = useState('light');
+  const [theme, setThemeState] = useState('classic-light');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isOnline, setIsOnline] = useState(false);
   const [modelOptions, setModelOptions] = useState({
@@ -89,17 +81,13 @@ export default function App() {
   const scrollRef = useRef(null);
 
   useEffect(() => {
-    // Find the currently active theme object or fallback to the first one
     const activeThemeData = THEMES.find((t) => t.id === theme) || THEMES[0];
-    
-    // Apply every CSS variable from the theme to the :root element
     const root = document.documentElement;
     Object.entries(activeThemeData.vars).forEach(([key, value]) => {
       root.style.setProperty(key, value);
     });
   }, [theme]);
 
-  // 5-second pinging
   useEffect(() => {
     const checkPing = async () => {
       try {
@@ -109,10 +97,8 @@ export default function App() {
         setIsOnline(false);
       }
     };
-    
-    checkPing(); // Initial check on load
-    const pingInterval = setInterval(checkPing, 5000); // Ping every 5 seconds
-    
+    checkPing();
+    const pingInterval = setInterval(checkPing, 5000);
     return () => clearInterval(pingInterval);
   }, []);
 
@@ -123,18 +109,15 @@ export default function App() {
     setRateInfo(getRateInfo());
     setThemeState(getTheme());
 
-    // URL Parameter handling for unique chat ID
     const params = new URLSearchParams(window.location.search);
     const urlChatId = params.get('chat');
     if (urlChatId && convs.some((c) => c.id === urlChatId)) {
       setActiveId(urlChatId);
     } else if (urlChatId) {
-      // Chat not found, clear invalid URL parameter
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
 
-  // Add this new useEffect right beneath it to update the URL dynamically:
   useEffect(() => {
     const url = new URL(window.location);
     if (activeId) {
@@ -164,12 +147,6 @@ export default function App() {
     return () => clearInterval(t);
   }, []);
 
-  const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setThemeState(next);
-    setTheme(next);
-  };
-
   const handleNew = () => {
     const conv = createConversation('New chat');
     setConversations(loadConversations());
@@ -186,7 +163,6 @@ export default function App() {
   };
 
   const handleRename = (id, newTitle) => {
-    // Add customTitle: true to prevent auto-generation overrides
     updateConversation(id, (c) => ({ ...c, title: newTitle, customTitle: true }));
     setConversations(loadConversations());
   };
@@ -214,27 +190,23 @@ export default function App() {
 
   const maybeGenerateTitle = async (convId, msgs) => {
     if (!msgs || msgs.length === 0 || msgs.length % 5 !== 0) return;
-    
-    // Ignore generation if the user has manually renamed the title
     const activeConv = conversations.find((c) => c.id === convId);
     if (activeConv?.customTitle) return;
-
     try {
       const title = await generateTitle(msgs, version);
-      // ADDED: Only update if we got a real title back that isn't the default
       if (title && title !== 'New chat') {
         updateConversation(convId, (c) => ({ ...c, title }));
         setConversations(loadConversations());
       }
     } catch {
-      // Suppress console error output
+      // Suppress
     }
   };
 
   const handleSend = async (text, attachments = []) => {
     let convId = activeId;
     let currentConvs = conversations;
-    
+
     if (!convId) {
       const conv = createConversation('New chat');
       convId = conv.id;
@@ -243,7 +215,6 @@ export default function App() {
       setActiveId(convId);
     }
 
-    // Number conversations as "Chat #X" on the first message sent
     const activeConv = currentConvs.find(c => c.id === convId);
     if (activeConv && activeConv.title === 'New chat' && messages.length === 0) {
       const newTitle = `Chat #${currentConvs.length}`;
@@ -252,8 +223,6 @@ export default function App() {
       setConversations(currentConvs);
     }
 
-    // Build user message content with attachments
-    // Prepare message contents for display vs LLM context payload
     const displayText = text || (attachments.length > 0 ? `[Attached ${attachments.length} file(s)]` : '');
     let fullContextContent = text;
     const imageAttachments = attachments.filter((a) => a.type === 'image');
@@ -264,7 +233,6 @@ export default function App() {
       fullContextContent = `${fullContextContent}\n\n--- ATTACHED FILES ---\n${docParts.join('\n\n')}`.trim();
     }
 
-    // For images, auto-analyze them via the vision model and include the analysis
     let visionAnalysis = '';
     if (imageAttachments.length > 0) {
       setLoading(true);
@@ -407,41 +375,15 @@ export default function App() {
     }
   };
 
-  const isDark = theme === 'dark';
-  const bgBase = isDark ? 'bg-zinc-950' : 'bg-zinc-50';
-  const textBase = isDark ? 'text-white' : 'text-zinc-900';
-  const headerBg = isDark ? 'bg-zinc-950/50 border-white/5' : 'bg-white/70 border-zinc-200';
-  const userBubble = isDark ? 'bg-white text-zinc-900' : 'bg-zinc-900 text-white';
-  const aiBubble = isDark ? 'bg-white/5 border-white/10' : 'bg-white border-zinc-200';
-  const aiBubbleText = isDark ? 'text-zinc-100' : 'text-zinc-800';
-  const logoBox = isDark ? 'bg-white/5 border-white/10' : 'bg-zinc-100 border-zinc-200';
-  const versionBtn = isDark ? 'bg-white/5 hover:bg-white/10 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600';
-  const dropdownBg = isDark ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200';
-  const versionActive = isDark ? 'bg-white/10 text-white' : 'bg-zinc-200 text-zinc-900';
-  const versionInactive = isDark ? 'text-zinc-400 hover:bg-white/5' : 'text-zinc-500 hover:bg-zinc-100';
-  const errorBg = isDark ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-red-50 border-red-200 text-red-600';
-  const welcomeText = isDark ? 'text-white' : 'text-zinc-900';
-  const welcomeSub = isDark ? 'text-zinc-500' : 'text-zinc-400';
-  const counterText = rateInfo.remaining <= 5 ? 'text-amber-400' : isDark ? 'text-zinc-400' : 'text-zinc-500';
-  const counterLabel = isDark ? 'text-zinc-600' : 'text-zinc-400';
-  const themeBtn = isDark ? 'bg-white/5 hover:bg-white/10 text-zinc-300' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600';
-  const burgerBtn = isDark ? 'hover:bg-white/5 text-zinc-400 hover:text-white' : 'hover:bg-zinc-100 text-zinc-500 hover:text-zinc-900';
-
   return (
-    <div className={`h-screen w-screen overflow-hidden ${bgBase} ${textBase} relative`}>
+    <div className="themed-bg themed-text h-screen w-screen overflow-hidden relative">
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/4 -left-1/4 w-[500px] h-[500px] sm:w-[600px] sm:h-[600px] bg-pink-500/10 rounded-full blur-[120px] animate-aurora-1" />
-        <div className="absolute top-1/3 -right-1/4 w-[400px] h-[400px] sm:w-[500px] sm:h-[500px] bg-blue-500/10 rounded-full blur-[120px] animate-aurora-2" />
-        <div className="absolute -bottom-1/4 left-1/3 w-[450px] h-[450px] sm:w-[550px] sm:h-[550px] bg-emerald-500/8 rounded-full blur-[120px] animate-aurora-3" />
+        <div className="themed-aurora-1 absolute -top-1/4 -left-1/4 w-[500px] h-[500px] sm:w-[600px] sm:h-[600px] rounded-full blur-[120px] animate-aurora-1" />
+        <div className="themed-aurora-2 absolute top-1/3 -right-1/4 w-[400px] h-[400px] sm:w-[500px] sm:h-[500px] rounded-full blur-[120px] animate-aurora-2" />
+        <div className="themed-aurora-3 absolute -bottom-1/4 left-1/3 w-[450px] h-[450px] sm:w-[550px] sm:h-[550px] rounded-full blur-[120px] animate-aurora-3" />
       </div>
 
-      <div
-        className="fixed inset-0 z-0 pointer-events-none opacity-[0.03]"
-        style={{
-          backgroundImage: 'linear-gradient(rgba(128,128,128,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(128,128,128,0.5) 1px, transparent 1px)',
-          backgroundSize: '40px 40px',
-        }}
-      />
+      <div className="themed-grid-bg fixed inset-0 z-0 pointer-events-none opacity-[0.03]" />
 
       <Sidebar
         conversations={conversations}
@@ -452,14 +394,13 @@ export default function App() {
         onRename={handleRename}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        theme={theme}
       />
 
       <div className="absolute inset-0 flex flex-col z-10">
-        <header className={`flex items-center gap-2 sm:gap-3 p-3 sm:p-4 border-b ${headerBg} backdrop-blur-xl`}>
+        <header className="themed-header flex items-center gap-2 sm:gap-3 p-3 sm:p-4 border-b backdrop-blur-xl">
           <button
             onClick={() => setSidebarOpen((v) => !v)}
-            className={`p-2 rounded-lg transition-colors ${burgerBtn}`}
+            className="themed-burger p-2 rounded-lg transition-colors"
           >
             <List size={22} />
           </button>
@@ -471,7 +412,7 @@ export default function App() {
           <div className="relative">
             <button
               onClick={() => setVersionDropdown((v) => !v)}
-              className={`flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm transition-colors ${versionBtn}`}
+              className="themed-version-btn flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm transition-colors"
             >
               {version}
               <CaretDown size={14} className={`transition-transform ${versionDropdown ? 'rotate-180' : ''}`} />
@@ -484,14 +425,14 @@ export default function App() {
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
-                    className={`absolute top-full left-0 mt-2 w-28 sm:w-32 ${dropdownBg} border rounded-xl shadow-2xl overflow-hidden z-20`}
+                    className="themed-dropdown absolute top-full left-0 mt-2 w-28 sm:w-32 border rounded-xl shadow-2xl overflow-hidden z-20"
                   >
                     {VERSIONS.map((v) => (
                       <button
                         key={v}
                         onClick={() => { setVersion(v); setVersionDropdown(false); }}
                         className={`w-full text-left px-3 sm:px-4 py-2.5 text-xs sm:text-sm transition-colors ${
-                          v === version ? versionActive : versionInactive
+                          v === version ? 'themed-version-active' : 'themed-version-inactive'
                         }`}
                       >
                         {v}
@@ -504,7 +445,7 @@ export default function App() {
           </div>
 
           {wifeMode && (
-            <span className="text-xs font-bold text-pink-400 bg-pink-500/10 px-2.5 sm:px-3 py-1 rounded-full border border-pink-500/20">
+            <span className="themed-wife-badge text-xs font-bold px-2.5 sm:px-3 py-1 rounded-full border">
               Wife Mode
             </span>
           )}
@@ -512,24 +453,22 @@ export default function App() {
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <div 
               className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs sm:text-sm font-bold transition-colors ${
-                isOnline 
-                  ? isDark ? 'bg-lime-500/10 border-lime-500/20 text-lime-400' : 'bg-lime-50 border-lime-200 text-lime-600'
-                  : isDark ? 'bg-zinc-800/50 border-zinc-700/50 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-500'
+                isOnline ? 'themed-online' : 'themed-offline'
               }`}
             >
               <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-lime-500 shadow-[0_0_8px_rgba(132,204,22,0.6)] animate-pulse' : 'bg-zinc-400'}`} />
               {isOnline ? 'Online' : 'Offline'}
             </div>
             <button
-              onClick={toggleTheme}
-              className={`p-2 rounded-lg transition-colors ${themeBtn}`}
+              onClick={() => setThemeSidebarOpen((v) => !v)}
+              className="themed-btn p-2 rounded-lg transition-colors"
+              title="Change theme"
             >
-              {isDark ? <Sun size={18} /> : <Moon size={18} />}
+              <Palette size={18} />
             </button>
           </div>
         </header>
 
-        {/* Right Theme Sidebar, currently not toggle-able */}
         <ThemeSidebar
           activeTheme={theme}
           onSelect={(newTheme) => {
@@ -555,8 +494,8 @@ export default function App() {
                 >
                   <Logo size={56} variant={1} />
                 </motion.div>
-                <h2 className={`text-xl sm:text-2xl font-bold mb-2 ${welcomeText}`}>How can I help you today?</h2>
-                <p className={`text-sm ${welcomeSub}`}>Start a conversation with Seraphina</p>
+                <h2 className="themed-welcome-text text-xl sm:text-2xl font-bold mb-2">How can I help you today?</h2>
+                <p className="themed-welcome-sub text-sm">Start a conversation with Seraphina</p>
               </motion.div>
             )}
 
@@ -570,13 +509,13 @@ export default function App() {
                   className={`flex gap-2 sm:gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {msg.role === 'assistant' && (
-                    <TalkingAvatar logoBox={logoBox} size={56} />
+                    <TalkingAvatar size={56} />
                   )}
                   <div
                     className={`group/msg max-w-[85%] sm:max-w-[80%] px-4 sm:px-5 py-3 rounded-2xl text-sm sm:text-base leading-relaxed transition-all duration-200 cursor-default ${
                       msg.role === 'user'
-                        ? `${userBubble} rounded-tr-sm hover:shadow-lg hover:-translate-y-0.5`
-                        : `${aiBubble} ${aiBubbleText} rounded-tl-sm backdrop-blur-sm hover:shadow-lg hover:-translate-y-0.5 ${isDark ? 'hover:bg-white/10' : 'hover:bg-zinc-50'} ${isDark ? 'hover:border-white/20' : 'hover:border-zinc-300'}`
+                        ? `themed-user-bubble rounded-tr-sm hover:shadow-lg hover:-translate-y-0.5`
+                        : `themed-ai-bubble rounded-tl-sm backdrop-blur-sm hover:shadow-lg hover:-translate-y-0.5`
                     }`}
                   >
                     <ReactMarkdown
@@ -584,36 +523,28 @@ export default function App() {
                       rehypePlugins={[rehypeKatex]}
                       className="break-words space-y-2 text-sm sm:text-base"
                       components={{
-                        // Discord-style paragraph line height
                         p: ({ node, ...props }) => <p className="whitespace-pre-wrap leading-relaxed inline-block w-full" {...props} />,
-                        
-                        // Discord code blocks and inline code
                         code: ({ node, inline, className, children, ...props }) => {
                           return !inline ? (
-                            <div className="bg-[#2b2d31] text-[#dbdee1] p-3 rounded-md overflow-x-auto my-2 text-xs sm:text-sm font-mono border border-zinc-700/50 shadow-sm">
+                            <div className="themed-code-block p-3 rounded-md overflow-x-auto my-2 text-xs sm:text-sm font-mono border shadow-sm">
                               <code className={className} {...props}>{children}</code>
                             </div>
                           ) : (
-                            <code className="bg-[#2b2d31] text-[#dbdee1] rounded px-1.5 py-0.5 text-[0.875em] font-mono border border-zinc-700/30" {...props}>{children}</code>
+                            <code className="themed-code-inline rounded px-1.5 py-0.5 text-[0.875em] font-mono" {...props}>{children}</code>
                           );
                         },
-                        
-                        // Discord blockquotes
                         blockquote: ({ node, ...props }) => (
-                          <blockquote className="border-l-4 border-zinc-500/80 pl-3 my-1 italic text-zinc-400" {...props} />
+                          <blockquote className="themed-quote border-l-4 pl-3 my-1 italic" {...props} />
                         ),
-
-                        // Discord lists
                         ul: ({ node, ...props }) => <ul className="list-disc list-outside ml-5 space-y-1" {...props} />,
                         ol: ({ node, ...props }) => <ol className="list-decimal list-outside ml-5 space-y-1" {...props} />,
                         li: ({ node, ...props }) => <li className="pl-0.5" {...props} />,
                         strong: ({ node, ...props }) => <strong className="font-bold" {...props} />,
-                        a: ({ node, ...props }) => <a className="text-blue-400 hover:underline" target="_blank" rel="noreferrer" {...props} />
+                        a: ({ node, ...props }) => <a className="themed-link hover:underline" target="_blank" rel="noreferrer" {...props} />
                       }}
                     >
                       {msg.content}
                     </ReactMarkdown>
-                    {/* NEW: Render attachments below the message text */}
                     {msg.attachments && msg.attachments.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {msg.attachments.map((file, idx) => (
@@ -647,17 +578,17 @@ export default function App() {
                 animate={{ opacity: 1 }}
                 className="flex gap-2 sm:gap-3 justify-start"
               >
-                <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl ${logoBox} border flex items-center justify-center shrink-0 mt-1 overflow-hidden`}>
+                <div className="themed-logo-box w-12 h-12 sm:w-14 sm:h-14 rounded-xl border flex items-center justify-center shrink-0 mt-1 overflow-hidden">
                   <Logo size={56} variant={2} overflow />
                 </div>
-                <div className={`px-4 sm:px-5 py-4 rounded-2xl ${aiBubble} border min-h-[56px] flex items-center`}>
-                  <ToolProgressDisplay progress={toolProgress || { phase: 'thinking' }} isDark={isDark} />
+                <div className="themed-ai-bubble px-4 sm:px-5 py-4 rounded-2xl border min-h-[56px] flex items-center">
+                  <ToolProgressDisplay progress={toolProgress || { phase: 'thinking' }} />
                 </div>
               </motion.div>
             )}
 
             {error && (
-              <div className={`max-w-3xl mx-auto text-sm border rounded-xl px-4 py-3 ${errorBg}`}>
+              <div className="themed-error max-w-3xl mx-auto text-sm border rounded-xl px-4 py-3">
                 {error}
               </div>
             )}
@@ -670,13 +601,12 @@ export default function App() {
           disabled={loading || rateInfo.blocked}
           wifeMode={wifeMode}
           onToggleWifeMode={handleToggleWifeMode}
-          theme={theme}
           options={modelOptions}
           onOptionsChange={setModelOptions}
         />
       </div>
 
-      {rateInfo.blocked && <BlockScreen resetIn={rateInfo.resetIn} theme={theme} />}
+      {rateInfo.blocked && <BlockScreen resetIn={rateInfo.resetIn} />}
 
       <AnimatePresence>
         {wifeModal && (
@@ -692,15 +622,15 @@ export default function App() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className={`${isDark ? 'bg-zinc-900 border-white/10' : 'bg-white border-zinc-200'} border rounded-3xl max-w-sm w-full p-8 shadow-2xl`}
+              className="themed-modal border rounded-3xl max-w-sm w-full p-8 shadow-2xl"
             >
               <div className="flex justify-center mb-4">
-                <div className="w-14 h-14 rounded-full bg-pink-500/10 border border-pink-500/20 flex items-center justify-center">
-                  <Lock size={28} className="text-pink-400" weight="duotone" />
+                <div className="themed-wife-modal-icon w-14 h-14 rounded-full border flex items-center justify-center">
+                  <Lock size={28} weight="duotone" />
                 </div>
               </div>
-              <h3 className={`text-xl font-bold text-center mb-2 ${isDark ? 'text-white' : 'text-zinc-900'}`}>Wife Mode</h3>
-              <p className={`text-center text-sm mb-6 ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>Enter the password to enable Wife Mode</p>
+              <h3 className="themed-modal text-xl font-bold text-center mb-2">Wife Mode</h3>
+              <p className="themed-modal-muted text-center text-sm mb-6">Enter the password to enable Wife Mode</p>
               <input
                 type="password"
                 autoFocus
@@ -708,21 +638,19 @@ export default function App() {
                 onChange={(e) => setWifeModal({ ...wifeModal, input: e.target.value, error: '' })}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !wifeModal.loading) submitWifePassword(); }}
                 placeholder="Password"
-                className={`w-full px-4 py-3 rounded-xl border outline-none focus:border-pink-500/50 mb-2 ${
-                  isDark ? 'bg-zinc-800 border-white/10 text-white placeholder-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400'
-                }`}
+                className="themed-modal-input themed-wife-input w-full px-4 py-3 rounded-xl border outline-none mb-2"
               />
               {wifeModal.error && <p className="text-red-400 text-xs mb-2">{wifeModal.error}</p>}
               <button
                 onClick={submitWifePassword}
                 disabled={wifeModal.loading}
-                className="w-full py-3 bg-pink-500 text-white rounded-xl font-bold hover:bg-pink-600 transition-colors disabled:opacity-50"
+                className="themed-wife-btn w-full py-3 rounded-xl font-bold transition-all disabled:opacity-50"
               >
                 {wifeModal.loading ? 'Verifying...' : 'Unlock'}
               </button>
               <button
                 onClick={() => setWifeModal(null)}
-                className={`w-full py-2 mt-2 text-sm ${isDark ? 'text-zinc-500 hover:text-zinc-300' : 'text-zinc-400 hover:text-zinc-600'} transition-colors`}
+                className="themed-modal-muted w-full py-2 mt-2 text-sm hover:text-red-400 transition-colors"
               >
                 Cancel
               </button>
@@ -734,7 +662,6 @@ export default function App() {
       {deleteTarget && (
         <DeleteModal
           conversation={deleteTarget}
-          theme={theme}
           onConfirm={handleDeleteConfirm}
           onCancel={() => setDeleteTarget(null)}
         />
