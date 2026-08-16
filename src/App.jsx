@@ -20,29 +20,33 @@ import {
   loadConversations, createConversation, deleteConversation, updateConversation,
   getRateInfo, recordMessage, isWifeEnabled, setWifeEnabled, getTheme, setTheme,
 } from './lib/storage';
+import { ToolProgressDisplay } from './components/ToolProgress';
 
 const VERSIONS = ['v1.6', 'v1.4'];
 const GENERIC_ERROR = "Action could not be completed. Seraphina couldn't receive your message or she couldn't react to it.";
 
-function TalkingAvatar({ size = 56 }) {
+function TalkingAvatar({ logoBox, size = 56 }) {
   const [variant, setVariant] = useState(1);
 
   useEffect(() => {
     let timeoutId;
     const startTime = Date.now();
-    const DURATION = 3000;
+    const DURATION = 3000; // 3 seconds total
 
     const cycle = () => {
       const elapsed = Date.now() - startTime;
       if (elapsed >= DURATION) {
-        setVariant(1);
+        setVariant(1); // Ensure it strictly ends on variant 1
         return;
       }
+      // Toggle between variant 1 and 2
       setVariant((prev) => (prev === 1 ? 2 : 1));
+      // Rhythmic & slightly unpredictable delay interval (130ms to 260ms)
       const nextDelay = Math.floor(Math.random() * (260 - 130 + 1)) + 130;
       timeoutId = setTimeout(cycle, nextDelay);
     };
 
+    // Kick off initial switch from 1 -> 2
     const initialDelay = Math.floor(Math.random() * (260 - 130 + 1)) + 130;
     timeoutId = setTimeout(cycle, initialDelay);
     return () => clearTimeout(timeoutId);
@@ -81,13 +85,16 @@ export default function App() {
   const scrollRef = useRef(null);
 
   useEffect(() => {
+    // Find the currently active theme object or fallback to the first one
     const activeThemeData = THEMES.find((t) => t.id === theme) || THEMES[0];
+    // Apply every CSS variable from the theme to the :root element
     const root = document.documentElement;
     Object.entries(activeThemeData.vars).forEach(([key, value]) => {
       root.style.setProperty(key, value);
     });
   }, [theme]);
 
+  // 5-second pinging
   useEffect(() => {
     const checkPing = async () => {
       try {
@@ -109,16 +116,19 @@ export default function App() {
     setRateInfo(getRateInfo());
     setThemeState(getTheme());
 
+    // URL Parameter handling for unique chat ID
     const params = new URLSearchParams(window.location.search);
     const urlChatId = params.get('chat');
     if (urlChatId && convs.some((c) => c.id === urlChatId)) {
       setActiveId(urlChatId);
     } else if (urlChatId) {
+       // Chat not found, clear invalid URL parameter
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
 
   useEffect(() => {
+    // Add this new useEffect right beneath it to update the URL dynamically:
     const url = new URL(window.location);
     if (activeId) {
       url.searchParams.set('chat', activeId);
@@ -163,6 +173,7 @@ export default function App() {
   };
 
   const handleRename = (id, newTitle) => {
+    // Add customTitle: true to prevent auto-generation overrides
     updateConversation(id, (c) => ({ ...c, title: newTitle, customTitle: true }));
     setConversations(loadConversations());
   };
@@ -176,6 +187,7 @@ export default function App() {
     if (!deleteTarget) return;
     const remaining = deleteConversation(deleteTarget.id);
     setConversations(remaining);
+    // Ignore generation if the user has manually renamed the title
     if (activeId === deleteTarget.id) {
       setActiveId(remaining[0]?.id || null);
       setMessages(remaining[0]?.messages || []);
@@ -194,12 +206,13 @@ export default function App() {
     if (activeConv?.customTitle) return;
     try {
       const title = await generateTitle(msgs, version);
+      // ADDED: Only update if we got a real title back that isn't the default
       if (title && title !== 'New chat') {
         updateConversation(convId, (c) => ({ ...c, title }));
         setConversations(loadConversations());
       }
     } catch {
-      // Suppress
+       // Suppress console error output
     }
   };
 
@@ -214,7 +227,8 @@ export default function App() {
       setConversations(currentConvs);
       setActiveId(convId);
     }
-
+    
+    // Number conversations as "Chat #X" on the first message sent
     const activeConv = currentConvs.find(c => c.id === convId);
     if (activeConv && activeConv.title === 'New chat' && messages.length === 0) {
       const newTitle = `Chat #${currentConvs.length}`;
@@ -223,6 +237,8 @@ export default function App() {
       setConversations(currentConvs);
     }
 
+    // Build user message content with attachments
+    // Prepare message contents for display vs LLM context payload
     const displayText = text || (attachments.length > 0 ? `[Attached ${attachments.length} file(s)]` : '');
     let fullContextContent = text;
     const imageAttachments = attachments.filter((a) => a.type === 'image');
@@ -233,6 +249,7 @@ export default function App() {
       fullContextContent = `${fullContextContent}\n\n--- ATTACHED FILES ---\n${docParts.join('\n\n')}`.trim();
     }
 
+    // For images, auto-analyze them via the vision model and include the analysis
     let visionAnalysis = '';
     if (imageAttachments.length > 0) {
       setLoading(true);
@@ -523,7 +540,9 @@ export default function App() {
                       rehypePlugins={[rehypeKatex]}
                       className="break-words space-y-2 text-sm sm:text-base"
                       components={{
+                        // Discord-style paragraph line height
                         p: ({ node, ...props }) => <p className="whitespace-pre-wrap leading-relaxed inline-block w-full" {...props} />,
+                        // Discord code blocks and inline code
                         code: ({ node, inline, className, children, ...props }) => {
                           return !inline ? (
                             <div className="themed-code-block p-3 rounded-md overflow-x-auto my-2 text-xs sm:text-sm font-mono border shadow-sm">
@@ -533,9 +552,11 @@ export default function App() {
                             <code className="themed-code-inline rounded px-1.5 py-0.5 text-[0.875em] font-mono" {...props}>{children}</code>
                           );
                         },
+                        // Discord blockquotes
                         blockquote: ({ node, ...props }) => (
                           <blockquote className="themed-quote border-l-4 pl-3 my-1 italic" {...props} />
                         ),
+                        // Discord lists
                         ul: ({ node, ...props }) => <ul className="list-disc list-outside ml-5 space-y-1" {...props} />,
                         ol: ({ node, ...props }) => <ol className="list-decimal list-outside ml-5 space-y-1" {...props} />,
                         li: ({ node, ...props }) => <li className="pl-0.5" {...props} />,
@@ -545,6 +566,7 @@ export default function App() {
                     >
                       {msg.content}
                     </ReactMarkdown>
+                    {/* Render attachments below the message text */}
                     {msg.attachments && msg.attachments.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {msg.attachments.map((file, idx) => (
