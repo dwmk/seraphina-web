@@ -17,7 +17,6 @@ import {
 } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ACCEPTED_FILE_TYPES, parseFile, formatBytes } from '../lib/fileParser';
-import { getThemeById } from '../lib/themes';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 const MAX_FILES = 5;
@@ -27,7 +26,6 @@ export function ChatInput({
   disabled, 
   wifeMode, 
   onToggleWifeMode, 
-  theme,
   options = {},
   onOptionsChange
 }) {
@@ -111,24 +109,6 @@ export function ChatInput({
     setAttachments([]);
   };
 
-  const isDark = theme === 'dark';
-  const inputBg = isDark ? 'bg-zinc-900/60 border-white/10 focus-within:border-white/30' : 'bg-white border-zinc-200 focus-within:border-zinc-400';
-  const inputText = isDark ? 'text-white placeholder-zinc-500' : 'text-zinc-900 placeholder-zinc-400';
-  const sendBtn = isDark ? 'bg-white text-zinc-900 hover:bg-zinc-200' : 'bg-zinc-900 text-white hover:bg-black';
-  const wifeText = wifeMode ? 'text-pink-400' : isDark ? 'text-zinc-500' : 'text-zinc-400';
-  const toggleBg = wifeMode ? 'bg-pink-500' : isDark ? 'bg-zinc-700' : 'bg-zinc-300';
-  const discordText = isDark ? 'text-zinc-500 hover:text-white' : 'text-zinc-400 hover:text-zinc-900';
-  const menuBg = isDark ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-900';
-  const plusBtnClass = isDark 
-    ? 'text-zinc-400 hover:text-white hover:bg-white/10' 
-    : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100';
-  const attachBtnClass = isDark
-    ? 'text-zinc-400 hover:text-white hover:bg-white/10'
-    : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100';
-  const chipBg = isDark ? 'bg-white/5 border-white/10' : 'bg-zinc-100 border-zinc-200';
-  const chipText = isDark ? 'text-zinc-300' : 'text-zinc-700';
-  const chipError = isDark ? 'text-red-400' : 'text-red-500';
-
   return (
     <div className="w-full px-4 pb-4 pt-2 relative z-10">
       <form onSubmit={submit} className="relative max-w-3xl mx-auto">
@@ -158,24 +138,24 @@ export function ChatInput({
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
-                  className={`relative flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-xl border ${chipBg}`}
+                  className={`relative flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-xl border themed-chip`}
                 >
                   {att.preview ? (
                     <img src={att.preview} alt={att.file.name} className="w-8 h-8 rounded-lg object-cover shrink-0" />
                   ) : (
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isDark ? 'bg-white/10' : 'bg-zinc-200'}`}>
-                      <FileText size={16} className={chipText} />
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 themed-chip-icon`}>
+                      <FileText size={16} className="themed-chip-text" />
                     </div>
                   )}
                   <div className="flex flex-col min-w-0 max-w-[140px]">
-                    <span className={`text-xs font-medium truncate ${chipText}`}>{att.file.name}</span>
-                    <span className={`text-[10px] ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                    <span className={`text-xs font-medium truncate themed-chip-text`}>{att.file.name}</span>
+                    <span className={`text-[10px] themed-sidebar-muted`}>
                       {att.parsing ? (
                         <span className="flex items-center gap-1">
                           <SpinnerGap size={10} className="animate-spin" /> Parsing...
                         </span>
                       ) : att.error ? (
-                        <span className={chipError}>Failed</span>
+                        <span className="text-red-500">Failed</span>
                       ) : (
                         formatBytes(att.file.size)
                       )}
@@ -184,7 +164,7 @@ export function ChatInput({
                   <button
                     type="button"
                     onClick={() => removeAttachment(att.id)}
-                    className={`p-0.5 rounded-full transition-colors ${isDark ? 'hover:bg-white/10 text-zinc-400 hover:text-white' : 'hover:bg-zinc-200 text-zinc-400 hover:text-zinc-900'}`}
+                    className={`p-0.5 rounded-full transition-colors themed-sidebar-hover themed-chip-secondary hover:text-current`}
                   >
                     <X size={14} weight="bold" />
                   </button>
@@ -203,7 +183,7 @@ export function ChatInput({
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className={`absolute bottom-full left-0 mb-3 w-72 p-3 border rounded-2xl shadow-2xl z-30 ${menuBg}`}
+                className={`absolute bottom-full left-0 mb-3 w-72 p-3 border rounded-2xl shadow-2xl z-30 themed-menu`}
               >
                 <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2 px-1">
                   Extra Capabilities
@@ -214,9 +194,7 @@ export function ChatInput({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={disabled || attachments.length >= MAX_FILES}
-                  className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors mb-1 ${
-                    isDark ? 'hover:bg-white/5' : 'hover:bg-zinc-100'
-                  } disabled:opacity-40 disabled:cursor-not-allowed`}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors mb-1 themed-sidebar-hover disabled:opacity-40 disabled:cursor-not-allowed`}
                 >
                   <div className="flex items-center gap-2">
                     <Paperclip size={18} />
@@ -234,7 +212,7 @@ export function ChatInput({
                   className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors mb-1 ${
                     options.jsonMode 
                       ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                      : isDark ? 'hover:bg-white/5' : 'hover:bg-zinc-100'
+                      : 'themed-sidebar-hover'
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -253,7 +231,7 @@ export function ChatInput({
                   className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors mb-1 ${
                     options.toolCalling 
                       ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
-                      : isDark ? 'hover:bg-white/5' : 'hover:bg-zinc-100'
+                      : 'themed-sidebar-hover'
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -288,13 +266,13 @@ export function ChatInput({
           )}
         </AnimatePresence>
 
-        <div className={`flex items-end gap-2 backdrop-blur-xl border rounded-3xl shadow-lg transition-colors pl-3 sm:pl-4 pr-2 py-2 ${inputBg}`}>
+        <div className={`flex items-end gap-2 backdrop-blur-xl border rounded-3xl shadow-lg transition-colors pl-3 sm:pl-4 pr-2 py-2 themed-input`}>
           
           {/* "+" Icon Button inside chat input on left side */}
           <button
             type="button"
             onClick={() => setMenuOpen((v) => !v)}
-            className={`p-2 mb-0.5 sm:mb-1 rounded-full transition-transform active:scale-95 ${plusBtnClass} ${menuOpen ? 'rotate-45' : ''}`}
+            className={`p-2 mb-0.5 sm:mb-1 rounded-full transition-transform active:scale-95 themed-btn ${menuOpen ? 'rotate-45' : ''}`}
             title="Model Capabilities & Tools"
           >
             <Plus size={20} weight="bold" />
@@ -309,14 +287,14 @@ export function ChatInput({
             placeholder="Message Seraphina..."
             rows={1}
             disabled={disabled}
-            className={`flex-1 bg-transparent outline-none resize-none font-medium text-sm sm:text-base py-3 max-h-40 disabled:opacity-50 ${inputText}`}
+            className={`flex-1 bg-transparent outline-none resize-none font-medium text-sm sm:text-base py-3 max-h-40 disabled:opacity-50 themed-text`}
             style={{ minHeight: '24px' }}
           />
 
           <button
             type="submit"
             disabled={disabled || (!value.trim() && attachments.filter((a) => a.parsed && !a.error).length === 0) || parsing}
-            className={`w-10 h-10 sm:w-11 sm:h-11 shrink-0 rounded-full flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-colors ${sendBtn}`}
+            className={`w-10 h-10 sm:w-11 sm:h-11 shrink-0 rounded-full flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-colors themed-send-btn`}
           >
             {parsing ? <SpinnerGap size={18} className="animate-spin" /> : <PaperPlaneTilt size={18} weight="fill" />}
           </button>
@@ -328,7 +306,7 @@ export function ChatInput({
             <button
               type="button"
               onClick={onToggleWifeMode}
-              className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${wifeText}`}
+              className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${wifeMode ? 'themed-wife-accent-text' : 'themed-sidebar-muted'}`}
             >
               {wifeMode ? <LockOpen size={14} weight="fill" /> : <Lock size={14} />}
               <span>Wife Mode</span>
@@ -336,7 +314,7 @@ export function ChatInput({
             <button
               type="button"
               onClick={onToggleWifeMode}
-              className={`relative w-9 h-5 rounded-full transition-colors ${toggleBg}`}
+              className={`relative w-9 h-5 rounded-full transition-colors ${wifeMode ? 'bg-[var(--wife-accent)]' : 'bg-[var(--offline-bg)]'}`}
             >
               <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${wifeMode ? 'translate-x-4' : ''}`} />
             </button>
@@ -366,7 +344,7 @@ export function ChatInput({
             href="https://discord.com/oauth2/authorize?client_id=1536094288142794792"
             target="_blank"
             rel="noopener noreferrer"
-            className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${discordText}`}
+            className={`flex items-center gap-1.5 text-xs font-medium transition-colors themed-sidebar-muted hover:themed-text`}
           >
             <DiscordLogo size={16} weight="fill" />
             <span className="hidden sm:inline">Use the Discord bot version</span>
